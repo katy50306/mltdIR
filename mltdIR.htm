@@ -1,0 +1,319 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>偶像別排名log</title>
+	<link rel="stylesheet" href="https://unpkg.com/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+	<link rel="stylesheet" href="https://unpkg.com/select2@4.0.13/dist/css/select2.min.css">
+	<link rel="stylesheet" href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_bootstrap5.min.css">
+	<style>
+		.select2 {
+			width: 250px;
+		}
+	</style>
+</head>
+ 
+<body>
+	<div class="container my-5">
+		<p>資料來源(Data Source)：<a href='https://api.matsurihi.me/docs/'>Princess (Public REST API)</a> - from <a href='https://www.matsurihi.me/'>matsurihi.me</a></p>
+		<p>程式碼更新時間：2023-07-05 1520 <a href="mltdIR.html" download>下載原始碼</a></p>
+		<p>請選偶像：<select id="idolId" class="select2" name="idolId"></select>
+		<p>請輸入要抓的名次：<input id="rank" type="text" placeholder='例: 1-10,15,20'></p>
+		<p>從台灣時間何時開始抓資料：<input type="datetime-local" id="time" name="time">(預設為前12小時)</p>
+		<p>資料間隔：<select id='all' class="select2" name="timerange"><option value="false">30分</option><option value="true">5分</option></select></p>
+		<p>
+			<button id="update" class="btn btn-primary">抓資料</button>
+			<button id="download-csv" class="btn btn-primary data">下載CSV</button>
+			<span>&emsp;&emsp;PT差異計算</span>
+			<button id="columnDiff" class="btn btn-primary data">不同名次</button>
+			<button id="rowDiff" class="btn btn-primary data">同名次</button>
+		</p>
+		<p class="text-danger">資料怪怪或不同功能請F5重新整理，有時間會再修...</p>
+	</div>
+	
+	<div class="container">
+		<canvas id="myChart"></canvas>
+	</div>
+	
+	<hr>
+	
+	<div class="container">
+		<p>Data</p>
+		<div id="table"></div>
+	</div>
+	
+
+	<script src='https://unpkg.com/jquery@3.7.0/dist/jquery.min.js'></script>
+	<script src='https://unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js'></script>
+	<script src='https://unpkg.com/chart.js@4.3.0/dist/chart.umd.js'></script>
+	<script src="https://unpkg.com/dayjs@1.11.9/dayjs.min.js"></script>
+	<script src="https://unpkg.com/select2@4.0.13/dist/js/select2.full.min.js"></script>
+	<script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
+
+	<script>
+	$(()=>{
+
+		const idol=[
+			{id:1,text:'1.天海 春香'},
+			{id:2,text:'2.如月 千早'},
+			{id:3,text:'3.星井 美希'},
+			{id:4,text:'4.萩原 雪歩'},
+			{id:5,text:'5.高槻 やよい'},
+			{id:6,text:'6.菊地 真'},
+			{id:7,text:'7.水瀬 伊織'},
+			{id:8,text:'8.四条 貴音'},
+			{id:9,text:'9.秋月 律子'},
+			{id:10,text:'10.三浦 あずさ'},
+			{id:11,text:'11.双海 亜美'},
+			{id:12,text:'12.双海 真美'},
+			{id:13,text:'13.我那覇 響'},
+			{id:14,text:'14.春日 未来'},
+			{id:15,text:'15.最上 静香'},
+			{id:16,text:'16.伊吹 翼'},
+			{id:17,text:'17.田中 琴葉'},
+			{id:18,text:'18.島原 エレナ'},
+			{id:19,text:'19.佐竹 美奈子'},
+			{id:20,text:'20.所 恵美'},
+			{id:21,text:'21.徳川 まつり'},
+			{id:22,text:'22.箱崎 星梨花'},
+			{id:23,text:'23.野々原 茜'},
+			{id:24,text:'24.望月 杏奈'},
+			{id:25,text:'25.ロコ'},
+			{id:26,text:'26.七尾 百合子'},
+			{id:27,text:'27.高山 紗代子'},
+			{id:28,text:'28.松田 亜利沙'},
+			{id:29,text:'29.高坂 海美'},
+			{id:30,text:'30.中谷 育'},
+			{id:31,text:'31.天空橋 朋花'},
+			{id:32,text:'32.エミリー スチュアート'},
+			{id:33,text:'33.北沢 志保'},
+			{id:34,text:'34.舞浜 歩'},
+			{id:35,text:'35.木下 ひなた'},
+			{id:36,text:'36.矢吹 可奈'},
+			{id:37,text:'37.横山 奈緒'},
+			{id:38,text:'38.二階堂 千鶴'},
+			{id:39,text:'39.馬場 このみ'},
+			{id:40,text:'40.大神 環'},
+			{id:41,text:'41.豊川 風花'},
+			{id:42,text:'42.宮尾 美也'},
+			{id:43,text:'43.福田 のり子'},
+			{id:44,text:'44.真壁 瑞希'},
+			{id:45,text:'45.篠宮 可憐'},
+			{id:46,text:'46.百瀬 莉緒'},
+			{id:47,text:'47.永吉 昴'},
+			{id:48,text:'48.北上 麗花'},
+			{id:49,text:'49.周防 桃子'},
+			{id:50,text:'50.ジュリア'},
+			{id:51,text:'51.白石 紬'},
+			{id:52,text:'52.桜守 歌織'}
+		];
+
+		$(".data").attr('disabled', true)
+		$("#idolId").select2({data:idol});
+		$("#all").select2();
+		
+		$("#time").val(dayjs().subtract(12, 'h').format('YYYY-MM-DDTHH:00'))
+		
+		var table = new Tabulator("#table", {
+			height:'500px',
+			autoColumns:true,
+		});
+		
+		$("#download-csv").on("click", ()=>{
+			table.download("csv", "data.csv", {bom:true})
+		});
+		
+		$('#columnDiff').on('click', ()=>{
+			columnDiff()
+		})
+
+		$('#rowDiff').on('click', ()=>{
+			rowDiff()
+		})
+		
+		$('#update').on('click', ()=>{
+			const idolId = $('#idolId').select2('data')[0].id
+			const rank = $('#rank').val()
+			if(rank===''){
+				alert('未填排名')
+				throw new Error("未填排名"); 
+			}
+			const since = dayjs($('#time').val()).toISOString()
+			const all = $('#all').select2('data')[0].id;
+			const url = "https://api.matsurihi.me/api/mltd/v2/events/290/rankings/idolPoint/" + idolId + "/logs/" + rank + '?since=' + since + '&all=' + all ;
+			$.getJSON( url, (d) => {
+
+			}).done((d)=>{
+				updateData(mc, d)
+				toTable(mc)
+				$(".data").attr('disabled', false)
+			}).fail((jqXHR, textStatus, errorThrown)=>{
+				alert('錯誤')
+			})//end getJSON
+		})
+
+		const ctx = document.getElementById('myChart')
+
+		const mc = new Chart(ctx, {
+			type: 'line',
+			data: {
+			  datasets: [{
+				label: [],
+				data: [],
+			  }]
+			},
+			options: {
+			  parsing: {
+				xAxisKey: 'aggregatedAt',
+				yAxisKey: 'score'
+			  }
+			}
+		 })
+		 
+		 
+		function updateData(chart, data) {
+
+			var c = Object.keys(data).length
+			
+			for (let i=0 ; i<c; i++ ) {
+				chart.data.datasets[i] = {
+					label: data[i].rank,
+					data: data[i].data
+				}
+			}
+			
+			chart.update()
+			
+		}//end updateDate
+		
+		
+		function toTable(chart){
+			var ds = chart.data.datasets
+			var dt=[] //時間
+			var r=[] //排名
+			var s=[] //分數
+			var a = Object.values(ds[0].data)//時間的數量
+			
+			//取時間
+			for (let j=0 ; j<a.length; j++ ) {
+				dt.push(dayjs(a[j].aggregatedAt).format('MM/DD HH:mmZZ'))
+			}
+			
+			
+			for (let i=0 ; i<ds.length; i++ ) {
+				var arr=[]
+				
+				//取排名
+				r[i] =  'rank' + ds[i].label
+				
+				//取分數
+				for (let j=0 ; j<a.length; j++ ) {
+					arr.push(ds[i].data[j].score)
+				}
+				s[i]=arr
+			}
+			
+			//組合
+			var tData=[]
+			var temp={}
+			
+			for (let j=0 ; j<a.length; j++ ) {
+				
+				for (let i=0 ; i<ds.length; i++ ) {
+					temp = Object.assign({}, temp, {[r[i]]: s[i][j]})
+				}
+				
+				tData.push(Object.assign({}, {aggregatedAt:dt[j]} , temp))
+			}
+
+			table.setData(tData)
+			
+		}//end toTable
+		
+		
+		async function columnDiff(){
+			//計算排名間差異
+			
+			var ds = table.getData()	//取回資料
+			var td = table.getColumnDefinitions()	//取得column資訊
+			var c = td.length //先固定size
+			
+			let r = await columnCal(c, td, ds)
+			
+			table.setData(r)
+			
+		}//end columnDiff
+		
+		function columnCal(c, td, ds){
+			//計算排名間pt差
+			
+			let d = Object.values(ds)
+			var dc = []
+			
+			d.forEach((e)=> {
+				//計算單row的diff資料
+				for (var i = 1; i< c-1; i++){
+					let n = td[i].field + '-' + td[i+1].field
+					e = Object.assign({}, e, { [n] : e[td[i].field] - e[td[i+1].field] })
+				}
+				dc.push(e)
+			})
+			
+			return dc
+			
+		}//end columnCal
+		
+
+		async function rowDiff(){
+
+			var ds = table.getData()	//取回資料
+			//計算同排名時間pt差
+            var a=[]    //存放array化的data [time, r1, r2, ...]
+            var t=[]    //存key
+
+            t=(Object.keys(ds[0]))    //抓title
+
+            ds.forEach((v)=>{ //抓data
+                a.push(Object.values(Object.values(v)))
+            })
+
+            //改title
+            var tc=t.length  //先存個數
+            for (let i=1; i<tc; i++){    //0是時間不抓
+                t.push('Δ'+t[i])
+            }
+
+            var b=[]//存放差的資料資料
+            //計算差異
+            var dc=a.length  //先存個數
+            
+            for (var i=0; i<dc;i++){
+                b[i] = await rowDiffCal(a,i,tc,t)
+            }
+
+            table.setData(b)
+		
+		}//end rowDiff
+
+        function rowDiffCal(a, i, tc, t){
+            //計算同排名前後時間的pt差
+            var v = []
+            for (let j=1;j<tc;j++){
+                    if (i==0){
+                        v[j-1] = 0
+                    }
+                    else{
+                        v[j-1] = a[i][j] - a[i-1][j]
+                    }
+                }
+            
+            //合併資料&轉物件
+            return Object.fromEntries(t.map((key, index) => [key, a[i].concat(v)[index]]))
+
+        }
+		
+	})//end ready
+	</script>
+<!-- Cloudflare Pages Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "d5649db2e0b64c1fa3235d67ff59f069"}'></script><!-- Cloudflare Pages Analytics --></body>
+</html>
