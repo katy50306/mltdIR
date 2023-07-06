@@ -17,7 +17,7 @@
 <body>
 	<div class="container my-5">
 		<p>資料來源(Data Source)：<a href='https://api.matsurihi.me/docs/'>Princess (Public REST API)</a> - from <a href='https://www.matsurihi.me/'>matsurihi.me</a></p>
-		<p>程式碼更新時間：2023-07-05 1520 <a href="mltdIR.html" download>下載原始碼</a></p>
+		<p>程式碼更新時間：2023-07-06 1550 <a href="mltdIR.html" download>下載原始碼</a></p>
 		<p>請選偶像：<select id="idolId" class="select2" name="idolId"></select>
 		<p>請輸入要抓的名次：<input id="rank" type="text" placeholder='例: 1-10,15,20'></p>
 		<p>從台灣時間何時開始抓資料：<input type="datetime-local" id="time" name="time">(預設為前12小時)</p>
@@ -175,6 +175,10 @@
 		 
 		function updateData(chart, data) {
 
+			for (i=0;i<chart.data.datasets.length;i++){
+				chart.data.datasets.pop()
+			}
+			
 			var c = Object.keys(data).length
 			
 			for (let i=0 ; i<c; i++ ) {
@@ -305,5 +309,5 @@
 		
 	})//end ready
 	</script>
-<!-- Cloudflare Pages Analytics --><script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "d5649db2e0b64c1fa3235d67ff59f069"}'></script><!-- Cloudflare Pages Analytics --></body>
+</body>
 </html>
