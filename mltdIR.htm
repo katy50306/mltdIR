@@ -146,7 +146,8 @@
 
 			}).done((d)=>{
 				updateData(mc, d)
-				toTable(mc)
+				let dp= dataProcess(d)
+            	setTable(dp)
 				$(".data").attr('disabled', false)
 			}).fail((jqXHR, textStatus, errorThrown)=>{
 				alert('錯誤')
@@ -186,50 +187,39 @@
 			chart.update()
 			
 		}//end updateDate
-		
-		
-		function toTable(chart){
-			var ds = chart.data.datasets
-			var dt=[] //時間
-			var r=[] //排名
+
+		function dataProcess(d){
+            
 			var s=[] //分數
-			var a = Object.values(ds[0].data)//時間的數量
 			
-			//取時間
-			for (let j=0 ; j<a.length; j++ ) {
-				dt.push(dayjs(a[j].aggregatedAt).format('MM/DD HH:mmZZ'))
-			}
-			
-			
-			for (let i=0 ; i<ds.length; i++ ) {
-				var arr=[]
-				
-				//取排名
-				r[i] =  'rank' + ds[i].label
-				
-				//取分數
-				for (let j=0 ; j<a.length; j++ ) {
-					arr.push(ds[i].data[j].score)
-				}
-				s[i]=arr
-			}
-			
+            let t=d[0].data.map(e=>dayjs(e.aggregatedAt).format('MM/DD HH:mmZZ')) //取時間
+            r=d.map(e=>'rank'+e.rank)  //取排名
+            d.map((e,i)=>{ //取分數
+                s[i] = e.data.map(e=>e.score)
+            })  
+
+            return {time: t, rank:r, score:s}
+
+        }//end dataProcess
+
+        function setTable(a){
+            
 			//組合
 			var tData=[]
 			var temp={}
 			
-			for (let j=0 ; j<a.length; j++ ) {
+			for (let j=0 ; j<a.time.length; j++ ) {
 				
-				for (let i=0 ; i<ds.length; i++ ) {
-					temp = Object.assign({}, temp, {[r[i]]: s[i][j]})
+				for (let i=0 ; i<a.rank.length; i++ ) {
+					temp = Object.assign({}, temp, {[a.rank[i]]: a.score[i][j]})
 				}
 				
-				tData.push(Object.assign({}, {aggregatedAt:dt[j]} , temp))
+				tData.push(Object.assign({}, {aggregatedAt:a.time[j]} , temp))
 			}
 
 			table.setData(tData)
-			
-		}//end toTable
+            
+        }
 		
 		
 		async function columnDiff(){
