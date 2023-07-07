@@ -17,7 +17,7 @@
 <body>
 	<div class="container mt-5">
 		<p>資料來源(Data Source)：<a href='https://api.matsurihi.me/docs/'>Princess (Public REST API)</a> - from <a href='https://www.matsurihi.me/'>matsurihi.me</a></p>
-		<p>程式碼更新時間：2023-07-07 1300 <a href="mltdIR.html" download>下載原始碼</a></p>
+		<p>程式碼更新時間：2023-07-07 1410 <a href="mltdIR.html" download>下載原始碼</a></p>
 		<p>請選偶像：<select id="idolId" class="select2" name="idolId"></select>
 		<p>請輸入要抓的名次：<input id="rank" type="text" placeholder='例: 1-10,15,20'></p>
 		<p>從台灣時間何時開始抓資料：<input type="datetime-local" id="time" name="time">(預設為前12小時)</p>
@@ -32,10 +32,6 @@
 		</p>
 		<p>
 			<button id="update" class="btn btn-primary">抓資料</button>
-			<button id="download-csv" class="btn btn-primary data">下載CSV</button>
-			<span>&emsp;&emsp;PT差異計算</span>
-			<button id="columnDiff" class="btn btn-primary data">不同名次</button>
-			<button id="rowDiff" class="btn btn-primary data">同名次</button>
 		</p>
 		<p class="text-danger">資料怪怪或不同功能請F5重新整理，有時間會再修...</p>
 	</div>
@@ -48,7 +44,10 @@
 	<hr>
 	
 	<div class="container mb-5">
-		<p>Data</p>
+		<p>Data</p><button id="download-csv" class="btn btn-primary data">下載CSV</button>
+		<span>&emsp;&emsp;PT差異計算</span>
+		<button id="columnDiff" class="btn btn-primary data">不同名次</button>
+		<button id="rowDiff" class="btn btn-primary data">同名次</button>
 		<div id="table"></div>
 	</div>
 	
