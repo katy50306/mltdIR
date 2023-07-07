@@ -21,7 +21,15 @@
 		<p>請選偶像：<select id="idolId" class="select2" name="idolId"></select>
 		<p>請輸入要抓的名次：<input id="rank" type="text" placeholder='例: 1-10,15,20'></p>
 		<p>從台灣時間何時開始抓資料：<input type="datetime-local" id="time" name="time">(預設為前12小時)</p>
-		<p>資料間隔：<select id='all' class="select2" name="timerange"><option value="false">30分</option><option value="true">5分</option></select></p>
+		<p>
+			<span>資料間隔：</span>
+			<span class="btn-group" role="group">
+				<input type="radio" class="btn-check" name="all" id="time1" value="false" checked>
+				<label class="btn btn-outline-primary" for="time1">30分</label>
+				<input type="radio" class="btn-check" name="all" id="time2" value="true">
+				<label class="btn btn-outline-primary" for="time2">&nbsp;5分</label>
+			</span>
+		</p>
 		<p>
 			<button id="update" class="btn btn-primary">抓資料</button>
 			<button id="download-csv" class="btn btn-primary data">下載CSV</button>
@@ -112,7 +120,6 @@
 
 		$(".data").attr('disabled', true)
 		$("#idolId").select2({data:idol});
-		$("#all").select2();
 		
 		$("#time").val(dayjs().subtract(12, 'h').format('YYYY-MM-DDTHH:00'))
 
@@ -125,7 +132,7 @@
             },
 			legend: {
 				itemStyle: {
-					fontSize: '20px' // Set the font size to 14 pixels
+					fontSize: '20px'
 				}
 			},
 			yAxis: {
@@ -162,8 +169,9 @@
 				throw new Error("未填排名"); 
 			}
 			const since = dayjs($('#time').val()).subtract(1, 's').toISOString()	//原始不含該點故-1s
-			const all = $('#all').select2('data')[0].id;
+			const all = $('input[name=all]:checked').val()
 			const url = "https://api.matsurihi.me/api/mltd/v2/events/290/rankings/idolPoint/" + idolId + "/logs/" + rank + '?since=' + since + '&all=' + all ;
+			
 			$.getJSON( url, (d) => {
 
 			}).done((d)=>{
@@ -176,7 +184,7 @@
 			})//end getJSON
 		})
 
-		
+
 		function dataProcess(d){
             
 			var s=[] //分數
