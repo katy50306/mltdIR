@@ -15,9 +15,9 @@
 </head>
  
 <body>
-	<div class="container my-5">
+	<div class="container mt-5">
 		<p>資料來源(Data Source)：<a href='https://api.matsurihi.me/docs/'>Princess (Public REST API)</a> - from <a href='https://www.matsurihi.me/'>matsurihi.me</a></p>
-		<p>程式碼更新時間：2023-07-06 1550 <a href="mltdIR.html" download>下載原始碼</a></p>
+		<p>程式碼更新時間：2023-07-07 1300 <a href="mltdIR.html" download>下載原始碼</a></p>
 		<p>請選偶像：<select id="idolId" class="select2" name="idolId"></select>
 		<p>請輸入要抓的名次：<input id="rank" type="text" placeholder='例: 1-10,15,20'></p>
 		<p>從台灣時間何時開始抓資料：<input type="datetime-local" id="time" name="time">(預設為前12小時)</p>
@@ -33,12 +33,13 @@
 	</div>
 	
 	<div class="container">
-		<canvas id="myChart"></canvas>
+		<p>Chart</p>
+		<div id="mc" style="width:100%; height:400px;"></div>
 	</div>
 	
 	<hr>
 	
-	<div class="container">
+	<div class="container mb-5">
 		<p>Data</p>
 		<div id="table"></div>
 	</div>
@@ -46,7 +47,7 @@
 
 	<script src='https://unpkg.com/jquery@3.7.0/dist/jquery.min.js'></script>
 	<script src='https://unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js'></script>
-	<script src='https://unpkg.com/chart.js@4.3.0/dist/chart.umd.js'></script>
+	<script src="https://code.highcharts.com/highcharts.js"></script>
 	<script src="https://unpkg.com/dayjs@1.11.9/dayjs.min.js"></script>
 	<script src="https://unpkg.com/select2@4.0.13/dist/js/select2.full.min.js"></script>
 	<script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
@@ -114,6 +115,27 @@
 		$("#all").select2();
 		
 		$("#time").val(dayjs().subtract(12, 'h').format('YYYY-MM-DDTHH:00'))
+
+		const chart = Highcharts.chart('mc', {
+            chart: {
+                zoomType: 'x'
+            },
+            title: {
+                text: ''
+            },
+			legend: {
+				itemStyle: {
+					fontSize: '20px' // Set the font size to 14 pixels
+				}
+			},
+			yAxis: {
+				labels: {
+					formatter: function() {
+						return Highcharts.numberFormat(this.value, 0, ',', ',');
+					}
+				}
+			},
+        });
 		
 		var table = new Tabulator("#table", {
 			height:'500px',
@@ -139,14 +161,14 @@
 				alert('未填排名')
 				throw new Error("未填排名"); 
 			}
-			const since = dayjs($('#time').val()).toISOString()
+			const since = dayjs($('#time').val()).subtract(1, 's').toISOString()	//原始不含該點故-1s
 			const all = $('#all').select2('data')[0].id;
 			const url = "https://api.matsurihi.me/api/mltd/v2/events/290/rankings/idolPoint/" + idolId + "/logs/" + rank + '?since=' + since + '&all=' + all ;
 			$.getJSON( url, (d) => {
 
 			}).done((d)=>{
-				updateData(mc, d)
 				let dp= dataProcess(d)
+				draw(dp)
             	setTable(dp)
 				$(".data").attr('disabled', false)
 			}).fail((jqXHR, textStatus, errorThrown)=>{
@@ -154,44 +176,7 @@
 			})//end getJSON
 		})
 
-		const ctx = document.getElementById('myChart')
-
-		const mc = new Chart(ctx, {
-			type: 'line',
-			data: {
-			  datasets: [{
-				label: [],
-				data: [],
-			  }]
-			},
-			options: {
-			  parsing: {
-				xAxisKey: 'aggregatedAt',
-				yAxisKey: 'score'
-			  }
-			}
-		 })
-		 
-		 
-		function updateData(chart, data) {
-
-			for (i=0;i<chart.data.datasets.length;i++){
-				chart.data.datasets.pop()
-			}
-			
-			var c = Object.keys(data).length
-			
-			for (let i=0 ; i<c; i++ ) {
-				chart.data.datasets[i] = {
-					label: data[i].rank,
-					data: data[i].data
-				}
-			}
-			
-			chart.update()
-			
-		}//end updateDate
-
+		
 		function dataProcess(d){
             
 			var s=[] //分數
@@ -205,6 +190,30 @@
             return {time: t, rank:r, score:s}
 
         }//end dataProcess
+
+
+		function draw(a){
+
+			//清舊資料
+			while (chart.series.length > 0) {
+				chart.series[0].remove();
+			}
+
+			//加新資料
+			chart.xAxis[0].update({
+				categories: a.time
+			})
+
+			for (let i=0; i<a.rank.length; i++){
+				chart.addSeries({
+					lineWidth: 3,
+					name:a.rank[i],
+					data:a.score[i]
+				}, false)
+			}
+			chart.redraw()
+		}
+
 
         function setTable(a){
             
@@ -239,6 +248,7 @@
 			
 		}//end columnDiff
 		
+
 		function columnCal(c, td, ds){
 			//計算排名間pt差
 			
@@ -289,6 +299,7 @@
             table.setData(b)
 		
 		}//end rowDiff
+
 
         function rowDiffCal(a, i, tc, t){
             //計算同排名前後時間的pt差
