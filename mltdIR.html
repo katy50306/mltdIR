@@ -18,8 +18,14 @@
 <body>
 	<div class="container mt-5">
 		<p>資料來源(Data Source)：<a href='https://api.matsurihi.me/docs/'>Princess (Public REST API)</a> - from <a href='https://www.matsurihi.me/'>matsurihi.me</a></p>
-		<p>程式碼更新時間：2023-07-08 1400 <a href="mltdIR.html" download>下載原始碼</a>&emsp;<a href="https://github.com/katy50306/mltdIR/">github</a></p>
+		<p>程式碼更新時間：<span id="timeUpdate"></span>&emsp;<a data-bs-toggle="collapse" href="#news">更新紀錄</a>&emsp;<a href="mltdIR.html" download>下載原始碼</a>&emsp;<a href="https://github.com/katy50306/mltdIR/">github</a></p>
+		
+		<!--更新紀錄-->
+		<div class="collapse" id="news">
+			<div class="card card-body" id="news-detail"></div>
+		</div>
 	</div>
+	
 	<div class="container my-1">
 		<form>
 			<div class="form-group row">
@@ -90,6 +96,7 @@
 	<script src="https://unpkg.com/dayjs@1.11.9/dayjs.min.js"></script>
 	<script src="https://unpkg.com/select2@4.0.13/dist/js/select2.full.min.js"></script>
 	<script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
+	<script src="https://unpkg.com/marked@5.1.1/marked.min.js"></script>
 
 	<script>
 	$(()=>{
@@ -363,6 +370,39 @@
 
         }
 		
+		//更新log
+		const news=`
+		# 2023/7/8
+		1. 修正外部連結之連結方式
+		2. 填資料部分改以bootstrap的grid方式處理
+		3. 用localStorage儲存所選偶像、名次、時間，減少重整後再輸入問題
+		4. 新增更新log
+		
+		# 2023/7/7
+		1. 改按鈕位置
+		2. 資料間隔由選單變為radio
+		3. 改以highchart表現
+		4. 時間查詢內部減1秒以呈現選定時間點的資料
+		
+		# 2023/7/6
+		1. 拆分取資料及將資料引入table的function
+		2. 修正圖表名次數由多變少時，多的那些仍留著的bug
+		
+		# 2023/7/5
+		新增計算同名次不同時間pt差
+		
+		# 2023/7/2
+		新增計算不同名次間的pt差異
+		
+		# 2023/7/1
+		新增table，展示各名次pt 
+		
+		# 2023/6/30
+		初版，僅繪圖
+		`
+    	$('#news-detail').html(marked.parse(news))
+		$('#timeUpdate').text('2023-07-08 15:46')
+
 	})//end ready
 	</script>
 </body>
