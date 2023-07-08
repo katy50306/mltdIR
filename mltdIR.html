@@ -8,7 +8,7 @@
 	<link rel="stylesheet" href="https://unpkg.com/select2@4.0.13/dist/css/select2.min.css">
 	<link rel="stylesheet" href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_bootstrap5.min.css">
 	<style>
-		.select2 {
+		.cw {
 			width: 250px;
 		}
 	</style>
@@ -17,10 +17,10 @@
 <body>
 	<div class="container mt-5">
 		<p>資料來源(Data Source)：<a href='https://api.matsurihi.me/docs/'>Princess (Public REST API)</a> - from <a href='https://www.matsurihi.me/'>matsurihi.me</a></p>
-		<p>程式碼更新時間：2023-07-07 1410 <a href="mltdIR.html" download>下載原始碼</a></p>
-		<p>請選偶像：<select id="idolId" class="select2" name="idolId"></select>
+		<p>程式碼更新時間：2023-07-08 1240 <a href="mltdIR.html" download>下載原始碼</a>&emsp;<a href="https://github.com/katy50306/mltdIR/">github</a></p>
+		<p>請選偶像：<select id="idolId" class="select2 cw" name="idolId"></select>
 		<p>請輸入要抓的名次：<input id="rank" type="text" placeholder='例: 1-10,15,20'></p>
-		<p>從台灣時間何時開始抓資料：<input type="datetime-local" id="time" name="time">(預設為前12小時)</p>
+		<p>從台灣時間何時開始抓資料：<input type="datetime-local" id="time" name="time"></p>
 		<p>
 			<span>資料間隔：</span>
 			<span class="btn-group" role="group">
@@ -33,7 +33,6 @@
 		<p>
 			<button id="update" class="btn btn-primary">抓資料</button>
 		</p>
-		<p class="text-danger">資料怪怪或不同功能請F5重新整理，有時間會再修...</p>
 	</div>
 	
 	<div class="container">
@@ -44,11 +43,12 @@
 	<hr>
 	
 	<div class="container mb-5">
-		<p>Data</p><button id="download-csv" class="btn btn-primary data">下載CSV</button>
+		<p>Data</p>
+		<button id="download-csv" class="btn btn-primary data">下載CSV</button>
 		<span>&emsp;&emsp;PT差異計算</span>
 		<button id="columnDiff" class="btn btn-primary data">不同名次</button>
 		<button id="rowDiff" class="btn btn-primary data">同名次</button>
-		<div id="table"></div>
+		<div id="table" class="mt-2"></div>
 	</div>
 	
 
@@ -118,9 +118,11 @@
 		];
 
 		$(".data").attr('disabled', true)
-		$("#idolId").select2({data:idol});
-		
-		$("#time").val(dayjs().subtract(12, 'h').format('YYYY-MM-DDTHH:00'))
+		//代預設值
+		$("#idolId").select2({data:idol}).val(localStorage.getItem("idolId")).trigger('change')
+		let timetest = (localStorage.getItem("time") === null ? dayjs().subtract(12, 'h').format('YYYY-MM-DDTHH:00'):localStorage.getItem("time"))
+		$("#time").val(timetest)
+		$("#rank").val(localStorage.getItem("rank"))
 
 		const chart = Highcharts.chart('mc', {
             chart: {
@@ -171,8 +173,13 @@
 			const all = $('input[name=all]:checked').val()
 			const url = "https://api.matsurihi.me/api/mltd/v2/events/290/rankings/idolPoint/" + idolId + "/logs/" + rank + '?since=' + since + '&all=' + all ;
 			
-			$.getJSON( url, (d) => {
+			//儲存變數，下次進入時代入
+			localStorage.setItem("idolId", idolId)
+			localStorage.setItem("rank", rank)
+			localStorage.setItem("time", dayjs($('#time').val()).format('YYYY-MM-DDTHH:00'))
 
+			$.getJSON( url, (d) => {
+				
 			}).done((d)=>{
 				let dp= dataProcess(d)
 				draw(dp)
