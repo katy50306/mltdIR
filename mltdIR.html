@@ -209,7 +209,7 @@
 			}
 			const since = dayjs($('#time').val()).subtract(1, 's').toISOString()	//原始不含該點故-1s
 			const all = $('input[name=all]:checked').val()
-			const url = "https://api.matsurihi.me/api/mltd/v2/events/290/rankings/idolPoint/" + idolId + "/logs/" + rank + '?since=' + since + '&all=' + all ;
+			const url = "https://api.matsurihi.me/api/mltd/v2/events/290/rankings/idolPoint/" + idolId + "/logs/" + rank + '?prettyPrint=false&since=' + since + '&all=' + all ;
 			
 			//儲存變數，下次進入時代入
 			localStorage.setItem("idolId", idolId)
@@ -219,7 +219,9 @@
 			$.getJSON( url, (d) => {
 				
 			}).done((d)=>{
-				let dp= dataProcess(d)
+				//30分的資料過濾出5分的
+				let df = (all==='true'?d:filterData(d))
+				let dp= dataProcess(df)
 				draw(dp)
             	setTable(dp)
 				$(".data").attr('disabled', false)
@@ -228,17 +230,32 @@
 			})//end getJSON
 		})
 
+		function filterData(d){
+			let r=[]
+			//處理30分最後一天含5分資料
+			let t1 = Object.values(d).map(e1=>{
+				let r2 = Object.values(e1.data).filter(e2=>{
+					if((dayjs(e2.aggregatedAt).format('mm') === '00' || dayjs(e2.aggregatedAt).format('mm') === '30')){
+						return e2
+					}
+				})
+				r.push({'rank':e1.rank, 'data':r2})
+			})
+			console.log('filter')
+			return r
+		}
 
-		function dataProcess(d){
+
+		function dataProcess(dp){
             
 			var s=[] //分數
 			
-            let t=d[0].data.map(e=>dayjs(e.aggregatedAt).format('MM/DD HH:mmZZ')) //取時間
-            r=d.map(e=>'rank'+e.rank)  //取排名
-            d.map((e,i)=>{ //取分數
+            let t=dp[0].data.map(e=>dayjs(e.aggregatedAt).format('MM/DD HH:mmZZ')) //取時間
+            r=dp.map(e=>'rank'+e.rank)  //取排名
+            dp.map((e,i)=>{ //取分數
                 s[i] = e.data.map(e=>e.score)
             })  
-
+			console.log('dataProcess')
             return {time: t, rank:r, score:s}
 
         }//end dataProcess
@@ -372,6 +389,10 @@
 		
 		//更新log
 		const news=`
+		# 2023/7/12
+		1. 30分最後一天變5分問題(原設計)，暫時修正，待後續再研究有無好解法
+		2. url query加入prettyPrint=false
+
 		# 2023/7/8
 		1. 修正外部連結之連結方式
 		2. 填資料部分改以bootstrap的grid方式處理
@@ -401,7 +422,7 @@
 		初版，僅繪圖
 		`
     	$('#news-detail').html(marked.parse(news))
-		$('#timeUpdate').text('2023-07-08 15:46')
+		$('#timeUpdate').text('2023-07-12 10:21:48')
 
 	})//end ready
 	</script>
