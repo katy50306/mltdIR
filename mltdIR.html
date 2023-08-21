@@ -35,6 +35,7 @@
 				<label for="eventID" class="col-sm-2 col-form-label">活動</label>
 				<div class="col-sm-10">
 				  <select id="eventId" class="select2 cww" name="eventId"></select>
+				  <button id="eventListRenewbtn" class="btn btn-outline-primary">更新活動清單</button>
 				</div>
 			</div>
 
@@ -111,18 +112,10 @@
 	<script>
 	$(()=>{
 
+		/*//活動選單更新處
 		const event=
 [{"id":290,"text":"R@ise a Good Sign!","bt":"2023-06-30T00:00:00+09:00","et":"2023-07-12T23:59:59+09:00"},{"id":271,"text":"MILLION LIVE! 10th ANNIVERSARY～Beyond @ Crossing!～","bt":"2023-02-14T00:00:00+09:00","et":"2023-02-26T23:59:59+09:00"},{"id":241,"text":"私たちのR@inbow!","bt":"2022-06-30T00:00:00+09:00","et":"2022-07-12T23:59:59+09:00"},{"id":192,"text":"Reach 4 the Dre@m!","bt":"2021-06-29T00:00:00+09:00","et":"2021-07-11T23:59:59+09:00"},{"id":142,"text":"CHALLENGE FOR GLOW-RY D＠YS!!!","bt":"2020-06-29T00:00:00+09:00","et":"2020-07-11T23:59:59+09:00"},{"id":92,"text":"UNI-ON@IR!!!!","bt":"2019-07-01T00:00:00+09:00","et":"2019-07-13T23:59:59+09:00"},{"id":44,"text":"BRAND★NEW★PERFORM@NCE!!!","bt":"2018-06-29T00:00:00+09:00","et":"2018-07-11T23:59:59+09:00"}]
-
-		/*const event=[
-			{id:290,text:'6.R@ise a Good Sign!'},
-			{id:241,text:'5.私たちのR@inbow!'},
-			{id:192,text:'4.Reach 4 the Dre@m!'},
-			{id:142,text:'3.CHALLENGE FOR GLOW-RY D＠YS!!!'},
-			{id:92,text:'2.UNI-ON@IR!!!!'},
-			{id:44,text:'1.BRAND★NEW★PERFORM@NCE!!!'},
-		]*/
-
+*/
 		const idol=[
 			{id:1,text:'1.天海 春香／天海 春香／HARUKA AMAMI'},
 			{id:2,text:'2.如月 千早／如月 千早／CHIHAYA KISARAGI'},
@@ -178,12 +171,18 @@
 			{id:52,text:'52.櫻守 歌織／桜守 歌織／KAORI SAKURAMORI'}
 		];
 
+		const eventList = JSON.parse(localStorage.getItem("eventList"))
 		$(".data").attr('disabled', true)
 		//代預設值
-		$("#eventId").select2({data:event}).val(localStorage.getItem("eventId")).trigger('change')
+		$("#eventId").select2({data:eventList}).val(localStorage.getItem("eventId")).trigger('change')
 		$("#idolId").select2({data:idol}).val(localStorage.getItem("idolId")).trigger('change')
 		$("#time").val(localStorage.getItem("time") === null ? dayjs().subtract(12, 'h').format('YYYY-MM-DDTHH:00'):localStorage.getItem("time"))
 		$("#rank").val(localStorage.getItem("rank"))
+
+		$('#eventListRenewbtn').on('click', function(event){
+			event.preventDefault();
+			eventListRenew();
+		})
 
 		const chart = Highcharts.chart('mc', {
             chart: {
@@ -416,6 +415,24 @@
             return Object.fromEntries(t.map((key, index) => [key, a[i].concat(v)[index]]))
 
         }
+
+		function eventListRenew(){
+			//更新活動清單，並存到localstroage中
+			$.ajax({
+                url: 'https://api.matsurihi.me/api/mltd/v2/events?type=anniversary&orderBy=id!',
+                async: false,
+                dataType: 'json',
+                success: function (ev) {
+                    let r=[]
+                    for(let i=0; i<ev.length; i++){
+                        r.push({id:ev[i].id, text:ev[i].name, bt:ev[i].schedule.beginAt, et:ev[i].schedule.endAt})
+                    }
+                    localStorage.setItem("eventList", JSON.stringify(r));
+					$("#eventId").select2({data:r}).val(localStorage.getItem("eventId")).trigger('change')
+                }
+            });
+
+		}
 		
 		//更新log
 		const news=`
