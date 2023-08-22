@@ -86,7 +86,7 @@
 		<div class="form-group row my-2">
 			<label class="col-sm-2"></label>
 			<div class="col-sm-10">
-				<button id="update" class="btn btn-primary">抓資料</button>
+				<button id="update" class="btn btn-outline-primary">抓資料</button>
 			</div>
 		</div>
 
@@ -103,13 +103,23 @@
 	
 	<div class="container mb-5">
 		<p>Data</p>
-		<button id="download-csv" class="btn btn-primary data">下載CSV</button>
+		<button id="download-csv" class="btn btn-outline-primary data">下載CSV</button>
 		<span>&emsp;&emsp;PT差異計算</span>
-		<button id="columnDiff" class="btn btn-primary data">不同名次</button>
-		<button id="rowDiff" class="btn btn-primary data">同名次</button>
+		<button id="columnDiff" class="btn btn-outline-primary data">不同名次</button>
+		<button id="rowDiff" class="btn btn-outline-primary data">同名次</button>
 		<div id="table" class="mt-2"></div>
 	</div>
 	
+	<!--更新時告知使用者用-->
+	<div id="myModal" class="modal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+		<div class="modal-dialog">
+		  <div class="modal-content">
+			<div class="modal-body">
+			  <p id="msg">...</p>
+			</div>
+		  </div>
+		</div>
+	</div>	  
 
 	<script src='https://unpkg.com/jquery@3.7.0/dist/jquery.min.js'></script>
 	<script src='https://unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js'></script>
@@ -121,6 +131,7 @@
 
 	<script>
 	$(()=>{
+
 		const idol=[
 			{id:1,text:'1.天海 春香／天海 春香／HARUKA AMAMI'},
 			{id:2,text:'2.如月 千早／如月 千早／CHIHAYA KISARAGI'},
@@ -246,6 +257,10 @@
 		})
 		
 		$('#update').on('click', ()=>{
+			//告知使用者更新中
+			$('#msg').text('更新中')
+			$('#myModal').modal('show')
+
 			const eventId = $('#eventId').select2('data')[0].id
 			const idolId = $('#idolId').select2('data')[0].id
 			const rank = $('#rank').val()
@@ -274,7 +289,10 @@
 				$(".data").attr('disabled', false)
 			}).fail((jqXHR, textStatus, errorThrown)=>{
 				alert('錯誤')
-			})//end getJSON
+			}).always(()=>{
+				$('#myModal').modal('hide')
+			})
+			//end getJSON
 		})
 
 		function filterData(d){
@@ -297,7 +315,7 @@
             
 			var s=[] //分數
 			
-            let t=dp[0].data.map(e=>dayjs(e.aggregatedAt).format('MM/DD HH:mmZZ')) //取時間
+            let t=dp[0].data.map(e=>dayjs(e.aggregatedAt).format('MM/DD HH:mm')) //取時間
             r=dp.map(e=>'rank'+e.rank)  //取排名
             dp.map((e,i)=>{ //取分數
                 s[i] = e.data.map(e=>e.score)
@@ -436,6 +454,9 @@
 
 		function eventListRenew(){
 			//更新活動清單，並存到localstroage中
+			$('#msg').text('更新中')
+			$('#myModal').modal('show')
+
 			$.ajax({
                 url: 'https://api.matsurihi.me/api/mltd/v2/events?type=anniversary&orderBy=id!',
                 async: false,
@@ -449,8 +470,11 @@
 					eventList = r
 					$("#eventId").html('').select2({data:eventList}).trigger('change')
 					getTimeLimit()
+					
                 }
             });
+
+			$('#myModal').modal('hide')
 		}
 
 		function getTimeLimit(){
@@ -494,7 +518,7 @@
 		2. 圖放大後的reset按鈕從右上改為左上
 		3. 活動清單以選單選項呈現
 		4. 活動清單若不存在時自動讀取至使用者電腦
-		5. 查資料起始時間跟活動起始及結束時間做變化
+		5. 資料起始時間與活動起始及結束時間連動
 		`
     	$('#news-detail').html(marked.parse(news))
 		$('#timeUpdate').text('2023-08-22 13:19:25')
