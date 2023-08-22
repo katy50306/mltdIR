@@ -35,7 +35,7 @@
 				<label for="eventID" class="col-sm-2 col-form-label">活動</label>
 				<div class="col-sm-10">
 				  <select id="eventId" class="select2 cww" name="eventId"></select>
-				  <button id="eventListRenewbtn" class="btn btn-outline-primary">更新活動清單</button>
+				  <button id="eventListRenewbtn" class="btn btn-outline-primary">若活動不在裡面請按此更新</button>
 				</div>
 			</div>
 
@@ -54,9 +54,19 @@
 			</div>
 
 			<div class="form-group row my-2">
-				<label for="time" class="col-sm-2 col-form-label">從何時起(你的時區)</label>
+				<label for="time" class="col-sm-2 col-form-label">從何時起</label>
 				<div class="col-sm-10">
 				  <input type="datetime-local" class="form-control cw" id="time">
+				</div>
+			</div>
+			
+			<div class="form-group row my-2">
+				<label for="time" class="col-sm-2 col-form-label">時區:<span id="tz"></span></label>
+				<div class="col-sm-3">
+					<span>開始：</span><span id='bt'></span>
+				</div>
+				<div class="col-sm-3">
+					<span>結束：</span><span id='et'></span>
 				</div>
 			</div>
 
@@ -111,11 +121,6 @@
 
 	<script>
 	$(()=>{
-
-		/*//活動選單更新處
-		const event=
-[{"id":290,"text":"R@ise a Good Sign!","bt":"2023-06-30T00:00:00+09:00","et":"2023-07-12T23:59:59+09:00"},{"id":271,"text":"MILLION LIVE! 10th ANNIVERSARY～Beyond @ Crossing!～","bt":"2023-02-14T00:00:00+09:00","et":"2023-02-26T23:59:59+09:00"},{"id":241,"text":"私たちのR@inbow!","bt":"2022-06-30T00:00:00+09:00","et":"2022-07-12T23:59:59+09:00"},{"id":192,"text":"Reach 4 the Dre@m!","bt":"2021-06-29T00:00:00+09:00","et":"2021-07-11T23:59:59+09:00"},{"id":142,"text":"CHALLENGE FOR GLOW-RY D＠YS!!!","bt":"2020-06-29T00:00:00+09:00","et":"2020-07-11T23:59:59+09:00"},{"id":92,"text":"UNI-ON@IR!!!!","bt":"2019-07-01T00:00:00+09:00","et":"2019-07-13T23:59:59+09:00"},{"id":44,"text":"BRAND★NEW★PERFORM@NCE!!!","bt":"2018-06-29T00:00:00+09:00","et":"2018-07-11T23:59:59+09:00"}]
-*/
 		const idol=[
 			{id:1,text:'1.天海 春香／天海 春香／HARUKA AMAMI'},
 			{id:2,text:'2.如月 千早／如月 千早／CHIHAYA KISARAGI'},
@@ -171,17 +176,30 @@
 			{id:52,text:'52.櫻守 歌織／桜守 歌織／KAORI SAKURAMORI'}
 		];
 
-		const eventList = JSON.parse(localStorage.getItem("eventList"))
 		$(".data").attr('disabled', true)
-		//代預設值
+
+		var eventList = JSON.parse(localStorage.getItem("eventList"))
+		//若首次進入，先取得活動清單
+		if(eventList === null){
+			eventListRenew()
+		}
+		//帶預設值
 		$("#eventId").select2({data:eventList}).val(localStorage.getItem("eventId")).trigger('change')
+		getTimeLimit()
+		
 		$("#idolId").select2({data:idol}).val(localStorage.getItem("idolId")).trigger('change')
 		$("#time").val(localStorage.getItem("time") === null ? dayjs().subtract(12, 'h').format('YYYY-MM-DDTHH:00'):localStorage.getItem("time"))
 		$("#rank").val(localStorage.getItem("rank"))
+		$("#tz").text(dayjs().format('Z'))
 
-		$('#eventListRenewbtn').on('click', function(event){
-			event.preventDefault();
+		$('#eventListRenewbtn').on('click', (e) => {
+			e.preventDefault();
 			eventListRenew();
+		})
+
+		//變更選擇時一併取得起始及結束時間
+		$("#eventId").on('select2:select', () => {
+			getTimeLimit();
 		})
 
 		const chart = Highcharts.chart('mc', {
@@ -270,7 +288,7 @@
 				})
 				r.push({'rank':e1.rank, 'data':r2})
 			})
-			//console.log('filter')
+
 			return r
 		}
 
@@ -284,7 +302,7 @@
             dp.map((e,i)=>{ //取分數
                 s[i] = e.data.map(e=>e.score)
             })  
-			//console.log('dataProcess')
+
             return {time: t, rank:r, score:s}
 
         }//end dataProcess
@@ -428,21 +446,58 @@
                         r.push({id:ev[i].id, text:ev[i].name, bt:ev[i].schedule.beginAt, et:ev[i].schedule.endAt})
                     }
                     localStorage.setItem("eventList", JSON.stringify(r));
-					$("#eventId").select2({data:r}).val(localStorage.getItem("eventId")).trigger('change')
+					eventList = r
+					$("#eventId").html('').select2({data:eventList}).trigger('change')
+					getTimeLimit()
                 }
             });
+		}
 
+		function getTimeLimit(){
+			//帶入活動時間
+			
+			var eventid = $('#eventId').select2().val()
+			//防bug若選單未有未選跳過
+			if(eventid === null || eventList === null) return
+			
+			//抓出活動時間
+			let r = $.grep(eventList,function(item, index){
+				return item.id == eventid
+			})
+
+			setTimeLimit(r[0].bt, r[0].et)
+
+		}
+
+		function setTimeLimit(beginTime, endTime){
+			
+			let bt=timeToLocal(beginTime)
+			let et=timeToLocal(endTime)
+			
+			//文字
+			$('#bt').text(bt)
+			$('#et').text(et)
+
+			//選擇時間部分
+			$('#time').attr('max', et).attr('min', bt).val(bt)
+		}
+
+		function timeToLocal(t){
+			//將取得的日期時間轉為當地日期時間
+			return dayjs(t).format('YYYY-MM-DDTHH:mm')
 		}
 		
 		//更新log
 		const news=`
-		# 2023/8/18
+		# 2023/8/21
 		1. 偶像增加中文及英文
-		2. 活動暫以寫死選單方式呈現
-		3. 圖放大後的reset按鈕從右上改為左上
+		2. 圖放大後的reset按鈕從右上改為左上
+		3. 活動清單以選單選項呈現
+		4. 活動清單若不存在時自動讀取至使用者電腦
+		5. 查資料起始時間跟活動起始及結束時間做變化
 		`
     	$('#news-detail').html(marked.parse(news))
-		$('#timeUpdate').text('2023-07-12 10:21:48')
+		$('#timeUpdate').text('2023-08-22 13:19:25')
 
 	})//end ready
 	</script>
