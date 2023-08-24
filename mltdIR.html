@@ -7,12 +7,10 @@
 	<link rel="stylesheet" href="https://unpkg.com/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 	<link rel="stylesheet" href="https://unpkg.com/select2@4.0.13/dist/css/select2.min.css">
 	<link rel="stylesheet" href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_bootstrap5.min.css">
+	<link rel="stylesheet" href="https://unpkg.com/@eonasdan/tempus-dominus@6.7.13/dist/css/tempus-dominus.min.css">
 	<style>
-		.cw {
-			width: 250px;
-		}
-		.cww {
-			width: 500px;
+		.select2 {
+			width: 100%;
 		}
 	</style>
 	<base target="_blank">
@@ -33,33 +31,28 @@
 		<form>
 			<div class="form-group row">
 				<label for="eventID" class="col-sm-2 col-form-label">活動</label>
-				<div class="col-sm-10">
-				  <select id="eventId" class="select2 cww" name="eventId"></select>
+				<div class="col-sm-6">
+				  <select id="eventId" class="select2" name="eventId"></select>
+				</div>
+				<div class="col-sm-3">
 				  <button id="eventListRenewbtn" class="btn btn-outline-primary">若活動不在裡面請按此更新</button>
 				</div>
 			</div>
 
 			<div class="form-group row">
 			  <label for="idolID" class="col-sm-2 col-form-label">偶像</label>
-			  <div class="col-sm-10">
-				<select id="idolId" class="select2 cww" name="idolId"></select>
+			  <div class="col-sm-6">
+				<select id="idolId" class="select2" name="idolId"></select>
 			  </div>
 			</div>
 
 			<div class="form-group row my-2">
 			  <label for="rank" class="col-sm-2 col-form-label">名次</label>
-			  <div class="col-sm-10">
-				<input type="text" class="form-control cw" id="rank" placeholder="例: 1-10,15,20">
+			  <div class="col-sm-3">
+				<input type="text" class="form-control" id="rank" placeholder="例: 1-10,15,20">
 			  </div>
 			</div>
 
-			<div class="form-group row my-2">
-				<label for="time" class="col-sm-2 col-form-label">從何時起</label>
-				<div class="col-sm-10">
-				  <input type="datetime-local" class="form-control cw" id="time">
-				</div>
-			</div>
-			
 			<div class="form-group row my-2">
 				<label for="time" class="col-sm-2 col-form-label">時區:<span id="tz"></span></label>
 				<div class="col-sm-3">
@@ -67,6 +60,19 @@
 				</div>
 				<div class="col-sm-3">
 					<span>結束：</span><span id='et'></span>
+				</div>
+			</div>
+
+			<div class="form-group row my-2">
+				<label for="time" class="col-sm-2 col-form-label">從何時抓</label>
+				<div class="col-sm-3">
+				  <div class="input-group" id="tp" data-td-target-input="nearest" data-td-target-toggle="nearest">
+					<input id="time" type="text" class="form-control" data-td-target="#tp"/>
+					<span class="input-group-text" data-td-target="#tp" data-td-toggle="datetimepicker"><span class="fas fa-calendar"></span></span>
+				  </div>
+				</div>
+				<div class="col-sm-6">
+					<span>格式：2023/06/30 12:34</span>
 				</div>
 			</div>
 
@@ -122,7 +128,11 @@
 	</div>	  
 
 	<script src='https://unpkg.com/jquery@3.7.0/dist/jquery.min.js'></script>
-	<script src='https://unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js'></script>
+	<script src='https://unpkg.com/@popperjs/core@2.11.8/dist/umd/popper.min.js'></script>
+	<script src='https://unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.min.js'></script>
+	<script src="https://unpkg.com/@fortawesome/fontawesome-free@6.4.2/js/solid.min.js"></script>
+    <script src="https://unpkg.com/@fortawesome/fontawesome-free@6.4.2/js/fontawesome.min.js"></script>
+	<script src="https://unpkg.com/@eonasdan/tempus-dominus@6.7.13/dist/js/tempus-dominus.js"></script>
 	<script src="https://code.highcharts.com/11.1.0/highcharts.js"></script>
 	<script src="https://unpkg.com/dayjs@1.11.9/dayjs.min.js"></script>
 	<script src="https://unpkg.com/select2@4.0.13/dist/js/select2.full.min.js"></script>
@@ -187,6 +197,19 @@
 			{id:52,text:'52.櫻守 歌織／桜守 歌織／KAORI SAKURAMORI'}
 		];
 
+		const timePick = new tempusDominus.TempusDominus(document.getElementById('tp'),{
+			useCurrent: false,
+			keepInvalid: true,
+            display: {
+                sideBySide: true,
+            },
+            localization: {
+                dayViewHeaderFormat: { month: 'numeric', year: 'numeric' },
+                hourCycle: 'h23',
+                format: 'yyyy/MM/dd HH:mm'
+            }
+		})
+
 		$(".data").attr('disabled', true)
 
 		var eventList = JSON.parse(localStorage.getItem("eventList"))
@@ -194,12 +217,13 @@
 		if(eventList === null){
 			eventListRenew()
 		}
-		//帶預設值
-		$("#eventId").select2({data:eventList}).val(localStorage.getItem("eventId")).trigger('change')
-		getTimeLimit()
+		else{
+			$("#eventId").select2({data:eventList}).val(localStorage.getItem("eventId")).trigger('change')
+			getTimeLimit()
+		}
 		
+		//帶預設值
 		$("#idolId").select2({data:idol}).val(localStorage.getItem("idolId")).trigger('change')
-		$("#time").val(localStorage.getItem("time") === null ? dayjs().subtract(12, 'h').format('YYYY-MM-DDTHH:00'):localStorage.getItem("time"))
 		$("#rank").val(localStorage.getItem("rank"))
 		$("#tz").text(dayjs().format('Z'))
 
@@ -276,7 +300,7 @@
 			localStorage.setItem("eventId", eventId)
 			localStorage.setItem("idolId", idolId)
 			localStorage.setItem("rank", rank)
-			localStorage.setItem("time", dayjs($('#time').val()).format('YYYY-MM-DDTHH:00'))
+			localStorage.setItem("time", $('#time').val())
 
 			$.getJSON( url, (d) => {
 				
@@ -470,7 +494,6 @@
 					eventList = r
 					$("#eventId").html('').select2({data:eventList}).trigger('change')
 					getTimeLimit()
-					
                 }
             });
 
@@ -478,7 +501,7 @@
 		}
 
 		function getTimeLimit(){
-			//帶入活動時間
+			//取得活動時間
 			
 			var eventid = $('#eventId').select2().val()
 			//防bug若選單未有未選跳過
@@ -489,39 +512,63 @@
 				return item.id == eventid
 			})
 
-			setTimeLimit(r[0].bt, r[0].et)
+			setTime(r[0].bt, r[0].et)
 
 		}
 
-		function setTimeLimit(beginTime, endTime){
-			
-			let bt=timeToLocal(beginTime)
-			let et=timeToLocal(endTime)
-			
+		function setTime(beginTime, endTime){
+			/*
+				設定選擇器的範圍
+				告知使用者活動時間
+				預填查詢時間
+			*/
+
+			let bt = dayjs(beginTime)
+			let et = dayjs(endTime)
 			//文字
-			$('#bt').text(bt)
-			$('#et').text(et)
+			$('#bt').text(bt.format('YYYY/MM/DD HH:mm'))
+			$('#et').text(et.format('YYYY/MM/DD HH:mm'))
+			
+			//填入時間
+			let u = dayjs(localStorage.getItem("time"))	//使用者上次查詢的
+			let n = dayjs()	//現在時間
 
-			//選擇時間部分
-			$('#time').attr('max', et).attr('min', bt).val(bt)
-		}
+			let q	//查詢的時間
 
-		function timeToLocal(t){
-			//將取得的日期時間轉為當地日期時間
-			return dayjs(t).format('YYYY-MM-DDTHH:mm')
+			//先用通例
+			q = et.subtract(12,'h').add(1,'s')
+			
+			//判斷現在是不是活動中
+			q = (( bt < n ) && ( n < et))? (dayjs(n).subtract(12,'h').add(1,'s')) : q
+			
+			//判斷使用者記憶時間是不是活動中
+			q = (( bt < u ) && ( u < et))? u : q
+
+			$('#time').val(q.format('YYYY/MM/DD HH:mm'))
+
+			//選擇器
+			timePick.updateOptions({
+				defaultDate:q.toDate(),
+				viewDate:q.toDate(),
+				restrictions: {
+					minDate: bt.toDate(),
+					maxDate: et.toDate(),
+				}
+			})
 		}
 		
 		//更新log
 		const news=`
-		# 2023/8/21
+		# 2023/8/24
 		1. 偶像增加中文及英文
 		2. 圖放大後的reset按鈕從右上改為左上
 		3. 活動清單以選單選項呈現
 		4. 活動清單若不存在時自動讀取至使用者電腦
 		5. 資料起始時間與活動起始及結束時間連動
+		6. 時間改以plugin選擇
 		`
     	$('#news-detail').html(marked.parse(news))
-		$('#timeUpdate').text('2023-08-22 13:19:25')
+		$('#timeUpdate').text('2023-08-24 13:00:00')
 
 	})//end ready
 	</script>
