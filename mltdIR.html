@@ -34,8 +34,8 @@
 				<div class="col-sm-6">
 				  <select id="eventId" class="select2" name="eventId"></select>
 				</div>
-				<div class="col-sm-3">
-				  <button id="eventListRenewbtn" class="btn btn-outline-primary">若活動不在裡面請按此更新</button>
+				<div class="col-sm-2">
+				  <button id="eventListRenewbtn" class="btn btn-outline-primary">更新活動清單</button>
 				</div>
 			</div>
 
@@ -67,18 +67,18 @@
 				<label for="time" class="col-sm-2 col-form-label">從何時抓</label>
 				<div class="col-sm-3">
 				  <div class="input-group" id="tp" data-td-target-input="nearest" data-td-target-toggle="nearest">
-					<input id="time" type="text" class="form-control" data-td-target="#tp"/>
+					<input id="time" type="text" class="form-control" data-td-target="#tp">
 					<span class="input-group-text" data-td-target="#tp" data-td-toggle="datetimepicker"><span class="fas fa-calendar"></span></span>
 				  </div>
 				</div>
-				<div class="col-sm-6">
+				<div class="col-sm-3">
 					<span>格式：2023/06/30 12:34</span>
 				</div>
 			</div>
 
 			<div class="form-group row my-2">
 				<label class="col-sm-2 col-form-label">資料間隔</label>
-				<div class="col-sm-10">
+				<div class="col-sm-2">
 					<span class="btn-group" role="group">
 						<input type="radio" class="btn-check" name="all" id="time1" value="false" checked>
 						<label class="btn btn-outline-primary" for="time1">30分</label>
@@ -91,8 +91,11 @@
 
 		<div class="form-group row my-2">
 			<label class="col-sm-2"></label>
-			<div class="col-sm-10">
+			<div class="col-sm-2">
 				<button id="update" class="btn btn-outline-primary">抓資料</button>
+			</div>
+			<div class="col-sm-6">
+				<div id='err' class="alert alert-danger" role="alert"></div>
 			</div>
 		</div>
 
@@ -121,7 +124,7 @@
 		<div class="modal-dialog">
 		  <div class="modal-content">
 			<div class="modal-body">
-			  <p id="msg">...</p>
+			  <p id="msg"></p>
 			</div>
 		  </div>
 		</div>
@@ -135,12 +138,15 @@
 	<script src="https://unpkg.com/@eonasdan/tempus-dominus@6.7.13/dist/js/tempus-dominus.js"></script>
 	<script src="https://code.highcharts.com/11.1.0/highcharts.js"></script>
 	<script src="https://unpkg.com/dayjs@1.11.9/dayjs.min.js"></script>
+	<script src="https://unpkg.com/dayjs@1.11.9/plugin/isBetween.js"></script>
 	<script src="https://unpkg.com/select2@4.0.13/dist/js/select2.full.min.js"></script>
 	<script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
 	<script src="https://unpkg.com/marked@5.1.1/marked.min.js"></script>
 
 	<script>
 	$(()=>{
+
+		dayjs.extend(window.dayjs_plugin_isBetween)
 
 		const idol=[
 			{id:1,text:'1.天海 春香／天海 春香／HARUKA AMAMI'},
@@ -210,6 +216,8 @@
             }
 		})
 
+		$('#err').hide()
+
 		$(".data").attr('disabled', true)
 
 		var eventList = JSON.parse(localStorage.getItem("eventList"))
@@ -226,6 +234,13 @@
 		$("#idolId").select2({data:idol}).val(localStorage.getItem("idolId")).trigger('change')
 		$("#rank").val(localStorage.getItem("rank"))
 		$("#tz").text(dayjs().format('Z'))
+
+		$('.form-control').on('keypress', (e)=>{
+			if (e.key === "Enter") {
+				e.preventDefault();
+				$('#update').click();
+			}
+		})
 
 		$('#eventListRenewbtn').on('click', (e) => {
 			e.preventDefault();
@@ -279,44 +294,69 @@
 		$('#rowDiff').on('click', ()=>{
 			rowDiff()
 		})
-		
+
 		$('#update').on('click', ()=>{
-			//告知使用者更新中
-			$('#msg').text('更新中')
-			$('#myModal').modal('show')
-
-			const eventId = $('#eventId').select2('data')[0].id
-			const idolId = $('#idolId').select2('data')[0].id
-			const rank = $('#rank').val()
-			if(rank===''){
-				alert('未填排名')
-				throw new Error("未填排名"); 
-			}
-			const since = dayjs($('#time').val()).subtract(1, 's').toISOString()	//原始不含該點故-1s
-			const all = $('input[name=all]:checked').val()
-			const url = "https://api.matsurihi.me/api/mltd/v2/events/" + eventId + "/rankings/idolPoint/" + idolId + "/logs/" + rank + '?prettyPrint=false&since=' + since + '&all=' + all ;
-			
-			//儲存變數，下次進入時代入
-			localStorage.setItem("eventId", eventId)
-			localStorage.setItem("idolId", idolId)
-			localStorage.setItem("rank", rank)
-			localStorage.setItem("time", $('#time').val())
-
-			$.getJSON( url, (d) => {
+			try{
 				
-			}).done((d)=>{
-				//30分的資料過濾出5分的
-				let df = (all==='true'?d:filterData(d))
-				let dp= dataProcess(df)
-				draw(dp)
-            	setTable(dp)
-				$(".data").attr('disabled', false)
-			}).fail((jqXHR, textStatus, errorThrown)=>{
-				alert('錯誤')
-			}).always(()=>{
-				$('#myModal').modal('hide')
-			})
-			//end getJSON
+				//取值
+				const eventId = $('#eventId').val()
+				const idolId = $('#idolId').val()
+				const rank = $('#rank').val()
+				const since = dayjs($('#time').val()).subtract(1, 's').toISOString()	//原始不含該點故-1s
+				const all = $('input[name=all]:checked').val()
+				const url = "https://api.matsurihi.me/api/mltd/v2/events/" + eventId + "/rankings/idolPoint/" + idolId + "/logs/" + rank + '?prettyPrint=false&since=' + since + '&all=' + all ;
+				
+				//檢查是否都填了
+				let msg='';
+
+				if(eventId === null) msg+='<p>活動未選</p>'
+				if(idolId === null) msg+='<p>偶像未選</p>'
+				
+				if(rank.length == 0) msg+='<p>名次未填</p>'
+				rank.split(',').forEach((e,idx)=>{
+					//console.log(e + ' d:' + e.search(/[^\d-]/) + ' -: ' + e.match(/-/g))
+					if(e.search(/[^\d-]/) >= 0) msg+='<p>名次第'+ (idx+1) +'項填寫有誤(只可數字 "-" ",")</p>'
+					if((e.match(/-/g) !== null) && (e.match(/-/g)).length>1 ) msg+='<p>名次第'+ (idx+1) +'項填寫有誤(不只一個"-")<p>'
+				})
+				
+				//時間未填在const since就會出錯
+				if(!dayjs(since).isBetween(dayjs($('#bt').text()),dayjs($('#et').text()),null,[])) msg+='<p>從何時抓不在活動時間</p>'
+
+				if(msg.length>0) throw msg
+			
+				//告知使用者更新中
+				$('#msg').text('更新中')
+				$('#myModal').modal('show')
+				
+				//儲存變數，下次進入時代入
+				localStorage.setItem("eventId", eventId)
+				localStorage.setItem("idolId", idolId)
+				localStorage.setItem("rank", rank)
+				localStorage.setItem("time", $('#time').val())
+
+				$.getJSON( url, (d) => {
+					
+				}).done((d)=>{
+					//30分的資料過濾出5分的
+					let df = (all==='true'?d:filterData(d))
+					let dp= dataProcess(df)
+					draw(dp)
+					setTable(dp)
+					$(".data").attr('disabled', false)
+				}).fail((jqXHR, textStatus, errorThrown)=>{
+					alert('錯誤')
+				}).always(()=>{
+					$('#myModal').modal('hide')
+				})
+				//end getJSON
+
+				$('#err').hide()
+				
+			} catch(e){
+				$('#err').html(e=='RangeError: invalid date'?'從何時抓未填':e).show()
+			}
+
+			
 		})
 
 		function filterData(d){
@@ -566,9 +606,10 @@
 		4. 活動清單若不存在時自動讀取至使用者電腦
 		5. 資料起始時間與活動起始及結束時間連動
 		6. 時間改以plugin選擇
+		7. 送出查詢前檢查內容是否有問題
 		`
     	$('#news-detail').html(marked.parse(news))
-		$('#timeUpdate').text('2023-08-24 13:00:00')
+		$('#timeUpdate').text('2023-08-25 16:18:00')
 
 	})//end ready
 	</script>
