@@ -142,7 +142,7 @@
 	<script src="https://unpkg.com/select2@4.0.13/dist/js/select2.full.min.js"></script>
 	<script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
 	<script src="https://unpkg.com/marked@5.1.1/marked.min.js"></script>
-
+	<script src="data.js"></script>	<!-- 測試用資料 -->
 	<script>
 	$(()=>{
 
@@ -219,7 +219,7 @@
 		$('#err').hide()
 
 		$(".data").attr('disabled', true)
-
+/*
 		var eventList = JSON.parse(localStorage.getItem("eventList"))
 		//若首次進入，先取得活動清單
 		if(eventList === null){
@@ -251,7 +251,7 @@
 		$("#eventId").on('select2:select', () => {
 			getTimeLimit();
 		})
-
+*/
 		const chart = Highcharts.chart('mc', {
             chart: {
                 zoomType: 'x',
@@ -295,15 +295,17 @@
 			rowDiff()
 		})
 
-		$('#update').on('click', ()=>{
+		$('#update').on('click', async ()=>{
+			/*
 			try{
-				
 				//取值
 				const eventId = $('#eventId').val()
 				const idolId = $('#idolId').val()
 				const rank = $('#rank').val()
 				const since = dayjs($('#time').val()).subtract(1, 's').toISOString()	//原始不含該點故-1s
+				*/
 				const all = $('input[name=all]:checked').val()
+				/*
 				const url = "https://api.matsurihi.me/api/mltd/v2/events/" + eventId + "/rankings/idolPoint/" + idolId + "/logs/" + rank + '?prettyPrint=false&since=' + since + '&all=' + all ;
 				
 				//檢查是否都填了
@@ -337,14 +339,33 @@
 				$.getJSON( url, (d) => {
 					
 				}).done((d)=>{
-					//30分的資料過濾出5分的
+					*/
+					console.clear();
+					console.time('TT');
+					console.time('timeGen');
+					//先產生時間矩陣
+					let t = timeGen(dayjs('2023-06-29 23:00'), dayjs('2023-07-12 23:59'), 30)
+					console.timeEnd('timeGen');
+					//複製抓來的資料
+					//將抓到的矩陣做整理
+					console.time('dataArray');
+					let c = await dataArray(JSON.parse(JSON.stringify(testData)), t)
+					console.log(c)
+					console.timeEnd('dataArray');
+					console.timeEnd('TT');
+					
+					/*
+
 					let df = (all==='true'?d:filterData(d))
 					let dp= dataProcess(df)
 					draw(dp)
 					setTable(dp)
 					$(".data").attr('disabled', false)
+					
+					console.timeEnd('TT');
+					/*
 				}).fail((jqXHR, textStatus, errorThrown)=>{
-					alert('錯誤')
+					alert('錯誤:'+ textStatus)
 				}).always(()=>{
 					$('#myModal').modal('hide')
 				})
@@ -354,41 +375,54 @@
 				
 			} catch(e){
 				$('#err').html(e=='RangeError: invalid date'?'從何時抓未填':e).show()
-			}
-
-			
+			}*/
 		})
 
-		function filterData(d){
-			let r=[]
-			//處理30分最後一天含5分資料
-			let t1 = Object.values(d).map(e1=>{
-				let r2 = Object.values(e1.data).filter(e2=>{
-					if((dayjs(e2.aggregatedAt).format('mm') === '00' || dayjs(e2.aggregatedAt).format('mm') === '30')){
-						return e2
-					}
-				})
-				r.push({'rank':e1.rank, 'data':r2})
-			})
-
-			return r
+		function timeGen(st, et, duration){
+			//產生時間array供後續比對
+			//st=活動開始時間 et=活動結束時間
+			let t = Math.ceil(et.diff(st,'m')/duration)
+			var arr=[]
+			for (let j = 0; j < t; j++){
+				arr.push([dayjs(st).add(j * duration,'m').format('MM/DD HH:mm')])
+			}
+			return arr
 		}
 
-
-		function dataProcess(dp){
-            
-			var s=[] //分數
+		async function dataArray(a, t){
+			//整理抓來的資料
 			
-            let t=dp[0].data.map(e=>dayjs(e.aggregatedAt).format('MM/DD HH:mm')) //取時間
-            r=dp.map(e=>'rank'+e.rank)  //取排名
-            dp.map((e,i)=>{ //取分數
-                s[i] = e.data.map(e=>e.score)
-            })  
+			var r=[]	//存rank
+			var d=[]	//存整理資料
+			
+			a.map((er,ir)=>{	//整個rank
+				r[ir]=er.rank
+				d[ir]=er.data.map((et,it)=>{	//時間
+					return [dayjs(et.aggregatedAt).format('MM/DD HH:mm'), et.score]
+				})
+			})
 
-            return {time: t, rank:r, score:s}
+			//最後整成[time, rank1, rank2, rank3]
+			//建立結果array，並將未有值的填入null
+			var na = new Array(t.length).fill(null).map(() => new Array(r.length).fill(null));
+			var result = na.map((x,i)=>{
+				return [...t[i],...x]
+			})
 
-        }//end dataProcess
-
+			for (var j=0; j<t.length; j++){
+				for (var k=0; k<r.length; k++){
+					for(var m=0; m<d[k].length; m++){
+						//先查位置
+						if(t[j][0]===d[k][m][0]){
+							//查到時紀錄分數 k+1因0為時間用
+							result[j][k+1] = d[k][m][1]
+							break;
+						}
+					}//end m
+				}//end k(排名)
+			}//end j(時間)
+			return {rank:r,data:result}
+		}//end dataArray
 
 		function draw(a){
 
@@ -596,6 +630,7 @@
 				}
 			})
 		}
+
 		
 		//更新log
 		const news=`
