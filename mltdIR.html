@@ -137,6 +137,7 @@
     <script src="https://unpkg.com/@fortawesome/fontawesome-free@6.4.2/js/fontawesome.min.js"></script>
 	<script src="https://unpkg.com/@eonasdan/tempus-dominus@6.7.13/dist/js/tempus-dominus.js"></script>
 	<script src="https://code.highcharts.com/11.1.0/highcharts.js"></script>
+	<script src="https://code.highcharts.com/11.1.0/modules/data.js"></script>
 	<script src="https://unpkg.com/dayjs@1.11.9/dayjs.min.js"></script>
 	<script src="https://unpkg.com/dayjs@1.11.9/plugin/isBetween.js"></script>
 	<script src="https://unpkg.com/select2@4.0.13/dist/js/select2.full.min.js"></script>
@@ -276,6 +277,9 @@
 					}
 				}
 			},
+			data: {
+				rows:[]
+			}
         });
 		
 		var table = new Tabulator("#table", {
@@ -344,22 +348,24 @@
 					console.time('TT');
 					console.time('timeGen');
 					//先產生時間矩陣
-					let t = timeGen(dayjs('2023-06-29 23:00'), dayjs('2023-07-12 23:59'), 30)
+					let t = timeGen(dayjs('2023-06-29 23:00'), dayjs('2023-07-12 23:59'), all)
 					console.timeEnd('timeGen');
 					//複製抓來的資料
 					//將抓到的矩陣做整理
 					console.time('dataArray');
-					let c = await dataArray(JSON.parse(JSON.stringify(testData)), t)
-					console.log(c)
+					const c = await dataArray(JSON.parse(JSON.stringify(testData)), t)
 					console.timeEnd('dataArray');
-					console.timeEnd('TT');
+					
+					console.time('draw');
+					draw(JSON.parse(JSON.stringify(c)))
+					console.timeEnd('draw');
 					
 					/*
-
-					let df = (all==='true'?d:filterData(d))
-					let dp= dataProcess(df)
-					draw(dp)
+					console.time('setTable');
 					setTable(dp)
+					console.timeEnd('setTable');
+					*/
+
 					$(".data").attr('disabled', false)
 					
 					console.timeEnd('TT');
@@ -378,9 +384,13 @@
 			}*/
 		})
 
-		function timeGen(st, et, duration){
+		function timeGen(st, et, durationType){
 			//產生時間array供後續比對
 			//st=活動開始時間 et=活動結束時間
+
+			//先判斷30分還是5分
+			duration = ( durationType === 'true' ? 5 : 30 )
+
 			let t = Math.ceil(et.diff(st,'m')/duration)
 			var arr=[]
 			for (let j = 0; j < t; j++){
@@ -421,28 +431,21 @@
 					}//end m
 				}//end k(排名)
 			}//end j(時間)
-			return {rank:r,data:result}
+
+			//插入標題
+			result.unshift(['time', ...r])
+			return result
 		}//end dataArray
 
 		function draw(a){
+			//待解決：timezone offset
 
-			//清舊資料
-			while (chart.series.length > 0) {
-				chart.series[0].remove();
-			}
-
-			//加新資料
-			chart.xAxis[0].update({
-				categories: a.time
+			chart.update({
+				data: {
+					rows:a
+				}
 			})
 
-			for (let i=0; i<a.rank.length; i++){
-				chart.addSeries({
-					lineWidth: 3,
-					name:a.rank[i],
-					data:a.score[i]
-				}, false)
-			}
 			chart.redraw()
 		}
 
