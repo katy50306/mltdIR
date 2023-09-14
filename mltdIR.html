@@ -254,7 +254,6 @@
 		})
 */
 
-		const tzoffset=new Date().getTimezoneOffset()	//抓時區差for highChart
 		const chart = Highcharts.chart('mc', {
             chart: {
                 zoomType: 'x',
@@ -283,13 +282,13 @@
 				rows:[]
 			},
 			time: {
-				timezoneOffset: tzoffset
+				timezoneOffset: new Date().getTimezoneOffset()
 			}
         });
-		
+	
 		var table = new Tabulator("#table", {
 			height:'500px',
-			autoColumns:true,
+			importFormat:"array",
 		});
 		
 		$("#download-csv").on("click", ()=>{
@@ -352,25 +351,27 @@
 					console.clear();
 					console.time('TT');
 					console.time('timeGen');
+					
 					//先產生時間矩陣
 					let t = timeGen(dayjs('2023-06-29 23:00'), dayjs('2023-07-12 23:59'), all)
 					console.timeEnd('timeGen');
+					
 					//複製抓來的資料
 					//將抓到的矩陣做整理
 					console.time('dataArray');
-					const c = await dataArray(JSON.parse(JSON.stringify(testData)), t)
+					const da = await dataArray(JSON.parse(JSON.stringify(d)), t)
 					console.timeEnd('dataArray');
 					
+					//畫圖
 					console.time('draw');
-					draw(JSON.parse(JSON.stringify(c)))
+					draw(JSON.parse(JSON.stringify(da)))
 					console.timeEnd('draw');
 					
-					/*
+					//做表格
 					console.time('setTable');
-					setTable(dp)
+					setTable(JSON.parse(JSON.stringify(da)))
 					console.timeEnd('setTable');
-					*/
-
+					
 					$(".data").attr('disabled', false)
 					
 					console.timeEnd('TT');
@@ -454,23 +455,21 @@
 		}
 
 
-        function setTable(a){
+        async function setTable(a){
             
-			//組合
-			var tData=[]
-			var temp={}
-			
-			for (let j=0 ; j<a.time.length; j++ ) {
-				
-				for (let i=0 ; i<a.rank.length; i++ ) {
-					temp = Object.assign({}, temp, {[a.rank[i]]: a.score[i][j]})
-				}
-				
-				tData.push(Object.assign({}, {aggregatedAt:a.time[j]} , temp))
-			}
+			//產生column資訊
+			var colDef=[]
+			a[0].forEach(x => {
+					colDef.push({title:x.toString(), field:x.toString()})
+				})
+			//時間部份改顯示格式
+			colDef[0].mutator= ((v) => dayjs(v).format("MM/DD HH:mm"))		
+			console.log(colDef)
 
-			table.setData(tData)
-            
+			table.setColumns(colDef)
+
+			//資料倒入table
+			table.setData(a)
         }
 		
 		
