@@ -366,7 +366,7 @@
 					
 					//做表格
 					console.time('setTable');
-					setTable(JSON.parse(JSON.stringify(da)))
+					await setTable(JSON.parse(JSON.stringify(da)))
 					console.timeEnd('setTable');
 					
 					$(".data").attr('disabled', false)
@@ -441,13 +441,11 @@
 		}//end dataArray
 
 		function draw(a){
-
 			chart.update({
 				data: {
 					rows:a
 				}
 			})
-
 			chart.redraw()
 		}
 
@@ -468,15 +466,43 @@
 
 			//產生column資訊
 			var colDef=[]
+			var n = a[0].length-1	//查排名的個數
+
+			//time
+			colDef.push({title:"time", field:"time", hozAlign:"right", headerSort:true})
+
+			//原始分數
+			var ori = []
+			for(let i=1; i<n+1; i++){
+					ori.push({title:result[0][i].toString(), field:result[0][i].toString(),hozAlign:"right", headerSort:false})
+			}
+			colDef.push({title:"pt", columns:ori, headerHozAlign:"center"})
+
+			//row差
+			var rdg = []
+			for(let i=n+1; i<2*n+1; i++){
+					rdg.push({title:result[0][i].toString(), field:result[0][i].toString(),hozAlign:"right", headerSort:false})
+			}
+			colDef.push({title:"同名分差", columns:rdg, headerHozAlign:"center"})
+
+			//column差
+			var cdg = []
+			for(let i=2*n+1; i<3*n; i++){
+					cdg.push({title:result[0][i].toString(), field:result[0][i].toString(),hozAlign:"right", headerSort:false})
+			}
+			colDef.push({title:"不同名分差", columns:cdg, headerHozAlign:"center"})
+
+			/*
 
 			result[0].forEach(x => {
 				colDef.push({title:x.toString(), field:x.toString(),hozAlign:"right", headerSort:false})
-			})
+			})*/
 
 			//時間部份改顯示格式，並提供排序
 			colDef[0].mutator = ((v) => dayjs(v).format("MM/DD HH:mm"))
 			colDef[0].headerSort = true
 
+			console.log(colDef)
 			//資料倒入table
 			table.setColumns(colDef)
 			table.setData(result)
