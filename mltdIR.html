@@ -253,6 +253,8 @@
 			getTimeLimit();
 		})
 */
+
+		const tzoffset=new Date().getTimezoneOffset()	//抓時區差for highChart
 		const chart = Highcharts.chart('mc', {
             chart: {
                 zoomType: 'x',
@@ -279,6 +281,9 @@
 			},
 			data: {
 				rows:[]
+			},
+			time: {
+				timezoneOffset: tzoffset
 			}
         });
 		
@@ -394,7 +399,7 @@
 			let t = Math.ceil(et.diff(st,'m')/duration)
 			var arr=[]
 			for (let j = 0; j < t; j++){
-				arr.push([dayjs(st).add(j * duration,'m').format('MM/DD HH:mm')])
+				arr.push([dayjs(st).add(j * duration,'m').valueOf()])
 			}
 			return arr
 		}
@@ -408,7 +413,7 @@
 			a.map((er,ir)=>{	//整個rank
 				r[ir]=er.rank
 				d[ir]=er.data.map((et,it)=>{	//時間
-					return [dayjs(et.aggregatedAt).format('MM/DD HH:mm'), et.score]
+					return [dayjs(et.aggregatedAt).valueOf(), et.score]
 				})
 			})
 
@@ -438,7 +443,6 @@
 		}//end dataArray
 
 		function draw(a){
-			//待解決：timezone offset
 
 			chart.update({
 				data: {
