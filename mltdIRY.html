@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>偶像別排名log</title>
+	<link rel="stylesheet" href="https://unpkg.com/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+	<link rel="stylesheet" href="https://unpkg.com/select2@4.0.13/dist/css/select2.min.css">
+	<link rel="stylesheet" href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_bootstrap5.min.css">
+	<link rel="stylesheet" href="https://unpkg.com/@eonasdan/tempus-dominus@6.7.13/dist/css/tempus-dominus.min.css">
+	<style>
+		.select2 {
+			width: 100%;
+		}
+	</style>
+	<base target="_blank">
+</head>
+ 
+<body>
+	<div class="container mt-5">
+		<p>資料來源(Data Source)：<a href='https://api.matsurihi.me/docs/'>Princess (Public REST API)</a> - from <a href='https://www.matsurihi.me/'>matsurihi.me</a></p>
+		<p>程式碼更新時間：<span id="timeUpdate"></span>&emsp;<a data-bs-toggle="collapse" href="#news">更新紀錄</a>&emsp;<a href="mltdIR.html" download>下載原始碼</a>&emsp;<a href="https://github.com/katy50306/mltdIR/">github</a></p>
+		
+		<!--更新紀錄-->
+		<div class="collapse" id="news">
+			<div class="card card-body" id="news-detail"></div>
+		</div>
+	</div>
+	
+	<div class="container my-1">
+		<form>
+			<div class="form-group row">
+				<label for="eventID" class="col-sm-2 col-form-label">活動</label>
+				<div class="col-sm-6">
+				  <select id="eventId" class="select2" name="eventId"></select>
+				</div>
+				<div class="col-sm-2">
+				  <button id="eventListRenewbtn" class="btn btn-outline-primary">更新活動清單</button>
+				</div>
+			</div>
+
+			<div class="form-group row">
+			  <label for="idolID" class="col-sm-2 col-form-label">偶像</label>
+			  <div class="col-sm-6">
+				<select id="idolId" class="select2" name="idolId"></select>
+			  </div>
+			</div>
+
+			<div class="form-group row my-2">
+			  <label for="rank" class="col-sm-2 col-form-label">名次</label>
+			  <div class="col-sm-3">
+				<input type="input" class="form-control" id="rank" placeholder="請輸入1-1000的其中一個數字">
+			  </div>
+			</div>
+		</form>
+
+		<div class="form-group row my-2">
+			<label class="col-sm-2"></label>
+			<div class="col-sm-2">
+				<button id="update" class="btn btn-outline-primary">抓資料</button>
+			</div>
+			<div class="col-sm-6">
+				<div id='err' class="alert alert-danger" role="alert"></div>
+			</div>
+		</div>
+
+	</div>
+
+	<hr>
+
+	<div class="container my-1">
+		<p>Chart</p>
+		<div id="mc" style="width:100%; height:400px;"></div>
+	</div>
+	
+	<!--更新時告知使用者用-->
+	<div id="myModal" class="modal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
+		<div class="modal-dialog">
+		  <div class="modal-content">
+			<div class="modal-body">
+			  <p id="msg"></p>
+			</div>
+		  </div>
+		</div>
+	</div>	  
+
+	<script src='https://unpkg.com/jquery@3.7.0/dist/jquery.min.js'></script>
+	<script src='https://unpkg.com/@popperjs/core@2.11.8/dist/umd/popper.min.js'></script>
+	<script src='https://unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.min.js'></script>
+	<script src="https://unpkg.com/@fortawesome/fontawesome-free@6.4.2/js/solid.min.js"></script>
+    <script src="https://unpkg.com/@fortawesome/fontawesome-free@6.4.2/js/fontawesome.min.js"></script>
+	<script src="https://unpkg.com/@eonasdan/tempus-dominus@6.7.13/dist/js/tempus-dominus.js"></script>
+	<script src="https://code.highcharts.com/11.1.0/highcharts.js"></script>
+	<script src="https://unpkg.com/dayjs@1.11.9/dayjs.min.js"></script>
+	<script src="https://unpkg.com/dayjs@1.11.9/plugin/duration.js"></script>
+	<script src="https://unpkg.com/select2@4.0.13/dist/js/select2.full.min.js"></script>
+	<script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
+	<script src="https://unpkg.com/marked@5.1.1/marked.min.js"></script>
+
+	<script>
+	
+	$(()=>{
+
+		dayjs.extend(window.dayjs_plugin_duration)
+
+		const idol=[
+			{id:1,text:'1.天海 春香／天海 春香／HARUKA AMAMI'},
+			{id:2,text:'2.如月 千早／如月 千早／CHIHAYA KISARAGI'},
+			{id:3,text:'3.星井 美希／星井 美希／MIKI HOSHII'},
+			{id:4,text:'4.萩原 雪步／萩原 雪歩／YUKIHO HAGIWARA'},
+			{id:5,text:'5.高槻 彌生／高槻 やよい／YAYOI TAKATSUKI'},
+			{id:6,text:'6.菊地 真／菊地 真／MAKOTO KIKUCHI'},
+			{id:7,text:'7.水瀨 伊織／水瀬 伊織／IORI MINASE'},
+			{id:8,text:'8.四條 貴音／四条 貴音／TAKANE SHIJOU'},
+			{id:9,text:'9.秋月 律子／秋月 律子／RITSUKO AKIZUKI'},
+			{id:10,text:'10.三浦 梓／三浦 あずさ／AZUSA MIURA'},
+			{id:11,text:'11.雙海 亞美／双海 亜美／AMI FUTAMI'},
+			{id:12,text:'12.雙海 真美／双海 真美／MAMI FUTAMI'},
+			{id:13,text:'13.我那霸 響／我那覇 響／HIBIKI GANAHA'},
+			{id:14,text:'14.春日 未來／春日 未来／MIRAI KASUGA'},
+			{id:15,text:'15.最上 靜香／最上 静香／SHIZUKA MOGAMI'},
+			{id:16,text:'16.伊吹 翼／伊吹 翼／TSUBASA IBUKI'},
+			{id:17,text:'17.田中 琴葉／田中 琴葉／KOTOHA TANAKA'},
+			{id:18,text:'18.島原 埃琳娜／島原 エレナ／ELENA SHIMABARA'},
+			{id:19,text:'19.佐竹 美奈子／佐竹 美奈子／MINAKO SATAKE'},
+			{id:20,text:'20.所 惠美／所 恵美／MEGUMI TOKORO'},
+			{id:21,text:'21.德川 茉莉／徳川 まつり／MATSURI TOKUGAWA'},
+			{id:22,text:'22.箱崎 星梨花／箱崎 星梨花／SERIKA HAKOZAKI'},
+			{id:23,text:'23.野野原 茜／野々原 茜／AKANE NONOHARA'},
+			{id:24,text:'24.望月 杏奈／望月 杏奈／ANNA MOCHIZUKI'},
+			{id:25,text:'25.Roco／ロコ／ROCO HANDA'},
+			{id:26,text:'26.七尾 百合子／七尾 百合子／YURIKO NANAO'},
+			{id:27,text:'27.高山 紗代子／高山 紗代子／SAYOKO TAKAYAMA'},
+			{id:28,text:'28.松田 亞利沙／松田 亜利沙／ARISA MATSUDA'},
+			{id:29,text:'29.高坂 海美／高坂 海美／UMI KOUSAKA'},
+			{id:30,text:'30.中谷 育／中谷 育／IKU NAKATANI'},
+			{id:31,text:'31.天空橋 朋花／天空橋 朋花／TOMOKA TENKUBASHI'},
+			{id:32,text:'32.艾米莉·斯圖亞特／エミリー スチュアート／EMILY STEWART'},
+			{id:33,text:'33.北澤 志保／北沢 志保／SHIHO KITAZAWA'},
+			{id:34,text:'34.舞濱 步／舞浜 歩／AYUMU MAIHAMA'},
+			{id:35,text:'35.木下 日向／木下 ひなた／HINATA KINOSHITA'},
+			{id:36,text:'36.矢吹 可奈／矢吹 可奈／KANA YABUKI'},
+			{id:37,text:'37.橫山 奈緒／横山 奈緒／NAO YOKOYAMA'},
+			{id:38,text:'38.二階堂 千鶴／二階堂 千鶴／CHIZURU NIKAIDO'},
+			{id:39,text:'39.馬場 木實／馬場 このみ／KONOMI BABA'},
+			{id:40,text:'40.大神 環／大神 環／TAMAKI OGAMI'},
+			{id:41,text:'41.豐川 風花／豊川 風花／FUKA TOYOKAWA'},
+			{id:42,text:'42.宮尾 美也／宮尾 美也／MIYA MIYAO'},
+			{id:43,text:'43.福田 法子／福田 のり子／NORIKO FUKUDA'},
+			{id:44,text:'44.真壁 瑞希／真壁 瑞希／MIZUKI MAKABE'},
+			{id:45,text:'45.篠宮 可憐／篠宮 可憐／KAREN SHINOMIYA'},
+			{id:46,text:'46.百瀨 莉緒／百瀬 莉緒／RIO MOMOSE'},
+			{id:47,text:'47.永吉 昴／永吉 昴／SUBARU NAGAYOSHI'},
+			{id:48,text:'48.北上 麗花／北上 麗花／REIKA KITAKAMI'},
+			{id:49,text:'49.周防 桃子／周防 桃子／MOMOKO SUOU'},
+			{id:50,text:'50.茱莉亞／ジュリア／JULIA'},
+			{id:51,text:'51.白石 紬／白石 紬／TSUMUGI SHIRAISHI'},
+			{id:52,text:'52.櫻守 歌織／桜守 歌織／KAORI SAKURAMORI'}
+		];
+
+		$('#err').hide()
+
+		var eventList = JSON.parse(localStorage.getItem("eventList"))
+		//若首次進入，先取得活動清單
+		if(eventList === null){
+			eventListRenew()
+		}
+		else{
+			$("#eventId").select2({data:eventList, multiple:true}).val(localStorage.getItem("eventId")).trigger('change')
+		}
+
+        $("#idolId").select2({data:idol})
+
+		$('.form-control').on('keypress', (e)=>{
+			if (e.key === "Enter") {
+				e.preventDefault();
+				$('#update').click();
+			}
+		})
+
+		$('#eventListRenewbtn').on('click', (e) => {
+			e.preventDefault();
+			eventListRenew();
+		})
+
+		const chart = Highcharts.chart('mc', {
+            chart: {
+                zoomType: 'x',
+				resetZoomButton: {
+					position: {
+						align: 'left',
+					}
+				}
+            },
+            title: {
+                text: ''
+            },
+			legend: {
+				itemStyle: {
+					fontSize: '20px'
+				}
+			},
+			yAxis: {
+				labels: {
+					formatter: function() {
+						return Highcharts.numberFormat(this.value, 0, ',', ',');
+					}
+				}
+			},
+			xAxis: {
+				type: 'datetime',
+				dateTimeLabelFormats: {
+					day: 'Day %e',
+      				hour: '%H:%M'
+				},
+				crosshair: true,
+			},
+			tooltip: {
+				xDateFormat: 'Day %e %H:%M',
+				shared: true,
+				style: {
+					fontSize: '16px'
+				}
+			},
+        });
+		
+		$('#update').on('click', async ()=>{
+			try{
+				
+				//取值
+				const eventId = $('#eventId').val()
+				const idolId = $('#idolId').val()
+				const rank = $('#rank').val()*1
+				
+				//檢查是否都填了
+				let msg='';
+
+				if(eventId.length === 0) msg+='<p>活動未選</p>'
+				if(idolId === null) msg+='<p>偶像未選</p>'				
+				if( !Number.isInteger(rank) || rank < 1 || rank > 1000 ) msg+='<p>名次未填、超出範圍或非數字</p>'
+				if(msg.length>0) throw msg
+                
+				//告知使用者更新中
+				$('#msg').text('更新中')
+				$('#myModal').modal('show')
+
+                //抓資料
+                let data = await gmd(eventId, idolId, rank)
+                
+                //畫圖
+                await draw(data)
+
+                //完成後關閉modal及錯誤訊息
+                $('#myModal').modal('hide')
+				$('#err').hide()
+                
+				
+			} catch(e){
+				$('#err').html(e).show()
+			}			
+		})
+
+        async function gmd(eID, iID, rID){
+            //取得資料
+            
+            var r=[]
+
+            for(var i=0; i<eID.length; i++){
+                let url = "https://api.matsurihi.me/api/mltd/v2/events/" + eID[i] + "/rankings/idolPoint/" + iID + "/logs/" + rID + '?prettyPrint=false'
+                $.ajax({
+					dataType: "json",
+					url: url,
+					async: false
+				})
+                .done((d)=>{
+
+					//找出活動的名稱跟開始時間
+					let evt = $.grep(eventList,(item)=>{
+						return item.id == eID[i]
+					})
+					var evtbt=dayjs(evt[0].bt)
+
+                    //處理資料
+                    let a = d[0].data.map(x=>{
+                        return [dayjs.duration(dayjs(x.aggregatedAt).diff(evtbt)).valueOf(), x.score]
+                    })
+                    r.push({id:evt[0].text, data:a})
+                })
+                .fail(()=>{
+                    $('#err').html('抓資料發生錯誤，請稍後再試。若重複出現請連同查詢條件開github issue').show()
+                })
+            }
+
+            return r
+        }
+
+		function draw(a){
+			//清舊資料
+			while (chart.series.length > 0) {
+				chart.series[0].remove();
+			}
+
+			for (let i=0; i<a.length; i++){
+				chart.addSeries({
+					lineWidth: 3,
+					name:a[i].id,
+					data:a[i].data
+				}, false)
+			}
+			chart.redraw()
+		}
+
+		function eventListRenew(){
+			//更新活動清單，並存到localstroage中
+			$('#msg').text('更新中')
+			$('#myModal').modal('show')
+
+			$.ajax({
+                url: 'https://api.matsurihi.me/api/mltd/v2/events?type=anniversary&orderBy=id!',
+                async: false,
+                dataType: 'json',
+                success: function (ev) {
+                    let r=[]
+                    for(let i=0; i<ev.length; i++){
+                        r.push({id:ev[i].id, text:ev[i].name, bt:ev[i].schedule.beginAt, et:ev[i].schedule.endAt})
+                    }
+                    localStorage.setItem("eventList", JSON.stringify(r));
+					eventList = r
+					$("#eventId").html('').select2({data:eventList}).trigger('change')
+                }
+            });
+
+			$('#myModal').modal('hide')
+		}
+
+	})//end ready
+	</script>
+</body>
+</html>
