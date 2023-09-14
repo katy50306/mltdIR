@@ -113,9 +113,6 @@
 	<div class="container mb-5">
 		<p>Data</p>
 		<button id="download-csv" class="btn btn-outline-primary data">下載CSV</button>
-		<span>&emsp;&emsp;PT差異計算</span>
-		<button id="columnDiff" class="btn btn-outline-primary data">不同名次</button>
-		<button id="rowDiff" class="btn btn-outline-primary data">同名次</button>
 		<div id="table" class="mt-2"></div>
 	</div>
 	
@@ -353,18 +350,18 @@
 					console.time('timeGen');
 					
 					//先產生時間矩陣
-					let t = timeGen(dayjs('2023-06-29 23:00'), dayjs('2023-07-12 23:59'), all)
+					let t = timeGen(dayjs('2023-06-29 23:30'), dayjs('2023-06-30 01:59'), all)
 					console.timeEnd('timeGen');
 					
 					//複製抓來的資料
 					//將抓到的矩陣做整理
 					console.time('dataArray');
-					const da = await dataArray(JSON.parse(JSON.stringify(d)), t)
+					const da = await dataArray(d, t)
 					console.timeEnd('dataArray');
 					
 					//畫圖
 					console.time('draw');
-					draw(JSON.parse(JSON.stringify(da)))
+					draw(da)
 					console.timeEnd('draw');
 					
 					//做表格
@@ -454,107 +451,75 @@
 			chart.redraw()
 		}
 
-
         async function setTable(a){
-            
+
+			//計算同排名差
+			let rd = await rowDiff(a)
+
+			//計算不同排名差
+			let cd = await columnDiff(a)
+
+			//合併
+			let result=a.map((x,i)=>{
+				return [...x, ...rd[i], ...cd[i]]
+			})
+
+			console.log(result)
+
 			//產生column資訊
 			var colDef=[]
-			a[0].forEach(x => {
-					colDef.push({title:x.toString(), field:x.toString()})
-				})
-			//時間部份改顯示格式
-			colDef[0].mutator= ((v) => dayjs(v).format("MM/DD HH:mm"))		
-			console.log(colDef)
 
-			table.setColumns(colDef)
+			result[0].forEach(x => {
+				colDef.push({title:x.toString(), field:x.toString(),hozAlign:"right", headerSort:false})
+			})
+
+			//時間部份改顯示格式，並提供排序
+			colDef[0].mutator = ((v) => dayjs(v).format("MM/DD HH:mm"))
+			colDef[0].headerSort = true
 
 			//資料倒入table
-			table.setData(a)
+			table.setColumns(colDef)
+			table.setData(result)
         }
-		
-		
-		async function columnDiff(){
-			//計算排名間差異
-			
-			var ds = table.getData()	//取回資料
-			var td = table.getColumnDefinitions()	//取得column資訊
-			var c = td.length //先固定size
-			
-			let r = await columnCal(c, td, ds)
-			
-			table.setData(r)
-			
-		}//end columnDiff
-		
 
-		function columnCal(c, td, ds){
-			//計算排名間pt差
+		async function rowDiff(oa){
+			//計算同排名差
+
+			//產生空array
+			var na = new Array(oa.length).fill(null).map(() => new Array(oa[0].length-1).fill(null));
 			
-			let d = Object.values(ds)
-			var dc = []
-			
-			d.forEach((e)=> {
-				//計算單row的diff資料
-				for (var i = 1; i< c-1; i++){
-					let n = td[i].field + '-' + td[i+1].field
-					e = Object.assign({}, e, { [n] : e[td[i].field] - e[td[i+1].field] })
+			for(var i=0; i<oa.length; i++){		
+				if(i==1) continue	//第1筆無法算
+				for(var j=1; j<oa[0].length; j++){	//0時間
+					if(i==0){	//0標題
+						na[i][j-1]='Δ'+oa[0][j]
+					}
+					else{
+						na[i][j-1]=oa[i][j]-oa[i-1][j]
+					}
 				}
-				dc.push(e)
-			})
-			
-			return dc
-			
-		}//end columnCal
-		
+			}
+			return na
+		}
 
-		async function rowDiff(){
+		async function columnDiff(oa){
+			//計算不同排名差
 
-			var ds = table.getData()	//取回資料
-			//計算同排名時間pt差
-            var a=[]    //存放array化的data [time, r1, r2, ...]
-            var t=[]    //存key
+			//產生空array
+			var na = new Array(oa.length).fill(null).map(() => new Array(oa[0].length-2).fill(null));
 
-            t=(Object.keys(ds[0]))    //抓title
-
-            ds.forEach((v)=>{ //抓data
-                a.push(Object.values(Object.values(v)))
-            })
-
-            //改title
-            var tc=t.length  //先存個數
-            for (let i=1; i<tc; i++){    //0是時間不抓
-                t.push('Δ'+t[i])
-            }
-
-            var b=[]//存放差的資料資料
-            //計算差異
-            var dc=a.length  //先存個數
-            
-            for (var i=0; i<dc;i++){
-                b[i] = await rowDiffCal(a,i,tc,t)
-            }
-
-            table.setData(b)
-		
-		}//end rowDiff
-
-
-        function rowDiffCal(a, i, tc, t){
-            //計算同排名前後時間的pt差
-            var v = []
-            for (let j=1;j<tc;j++){
-                    if (i==0){
-                        v[j-1] = 0
-                    }
-                    else{
-                        v[j-1] = a[i][j] - a[i-1][j]
-                    }
-                }
-            
-            //合併資料&轉物件
-            return Object.fromEntries(t.map((key, index) => [key, a[i].concat(v)[index]]))
-
-        }
+			for(var i=0; i<oa.length; i++){
+				for(var j=1; j<oa[0].length-1; j++){	//0時間
+					if(i==0){	//0標題
+						na[i][j-1]=oa[0][j] + '-' + oa[0][j+1]
+					}
+					else{
+						na[i][j-1]=oa[i][j]-oa[i][j+1]
+					}
+				}
+			}
+			return na
+		}
 
 		function eventListRenew(){
 			//更新活動清單，並存到localstroage中
