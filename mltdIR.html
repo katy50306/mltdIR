@@ -280,7 +280,11 @@
 			},
 			time: {
 				timezoneOffset: new Date().getTimezoneOffset()
-			}
+			},
+			tooltip: {
+				shared: true,
+				crosshairs: true
+			},
         });
 	
 		var table = new Tabulator("#table", {
@@ -462,47 +466,27 @@
 				return [...x, ...rd[i], ...cd[i]]
 			})
 
-			console.log(result)
-
 			//產生column資訊
 			var colDef=[]
 			var n = a[0].length-1	//查排名的個數
+			var ot = ['time','pt','同名pt差','不同名pt差']
 
-			//time
-			colDef.push({title:"time", field:"time", hozAlign:"right", headerSort:true})
+			for( var i=0; i<4; i++){
+				if(i==0){
+					colDef.push({title:"time", field:"time", hozAlign:"right", headerSort:true, frozen:true, mutator:((v) => dayjs(v).format("MM/DD HH:mm"))})
+				}//end if
+				else{
+					var it = []
+					for(let j=n*(i-1)+1 ; j<n*i+1 ; j++){
+						if( !(j < result[0].length) ) break //最後column少1，check用
+						it.push({title:result[0][j].toString(), field:result[0][j].toString(),hozAlign:"right", headerSort:false, headerHozAlign:"center"})
+					}//end j for
+					
+					if(it.length==0) break //check it是否有東西
+					colDef.push({title:ot[i], columns:it, headerHozAlign:"center"})
+				}//end else
+			}//end i for
 
-			//原始分數
-			var ori = []
-			for(let i=1; i<n+1; i++){
-					ori.push({title:result[0][i].toString(), field:result[0][i].toString(),hozAlign:"right", headerSort:false})
-			}
-			colDef.push({title:"pt", columns:ori, headerHozAlign:"center"})
-
-			//row差
-			var rdg = []
-			for(let i=n+1; i<2*n+1; i++){
-					rdg.push({title:result[0][i].toString(), field:result[0][i].toString(),hozAlign:"right", headerSort:false})
-			}
-			colDef.push({title:"同名分差", columns:rdg, headerHozAlign:"center"})
-
-			//column差
-			var cdg = []
-			for(let i=2*n+1; i<3*n; i++){
-					cdg.push({title:result[0][i].toString(), field:result[0][i].toString(),hozAlign:"right", headerSort:false})
-			}
-			colDef.push({title:"不同名分差", columns:cdg, headerHozAlign:"center"})
-
-			/*
-
-			result[0].forEach(x => {
-				colDef.push({title:x.toString(), field:x.toString(),hozAlign:"right", headerSort:false})
-			})*/
-
-			//時間部份改顯示格式，並提供排序
-			colDef[0].mutator = ((v) => dayjs(v).format("MM/DD HH:mm"))
-			colDef[0].headerSort = true
-
-			console.log(colDef)
 			//資料倒入table
 			table.setColumns(colDef)
 			table.setData(result)
