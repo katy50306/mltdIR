@@ -332,6 +332,17 @@
 		const table = new Tabulator("#table", {
 			height:'500px',
 			autoColumns:true,
+			autoColumnsDefinitions: function(definitions) {
+				definitions.forEach(col => {
+					if (col.field !== 'time') {
+						col.formatter = function(cell) {
+							const val = cell.getValue()
+							return val != null ? val.toLocaleString() : ''
+						}
+					}
+				})
+				return definitions
+			}
 		});
 		
 		$("#download-csv").on("click", ()=>{

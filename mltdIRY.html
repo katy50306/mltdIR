@@ -274,6 +274,17 @@
 		const table = new Tabulator("#table", {
 			height:'500px',
 			autoColumns:true,
+			autoColumnsDefinitions: function(definitions) {
+				definitions.forEach(col => {
+					if (col.field !== 'time') {
+						col.formatter = function(cell) {
+							const val = cell.getValue()
+							return val != null ? val.toLocaleString() : ''
+						}
+					}
+				})
+				return definitions
+			}
 		});
 
 		$("#download-csv").on("click", ()=>{
@@ -348,10 +359,10 @@
 						const evt = $.grep(eventList, (item) => item.id == eventId)
 						const evtbt = dayjs(evt[0].bt)
 
-						// 處理資料：計算相對於活動開始時間的 duration（毫秒）
-						const data = d[0].data.map(x => {
-							return [dayjs.duration(dayjs(x.aggregatedAt).diff(evtbt)).valueOf(), x.score]
-						})
+						// 處理資料：過濾 30 分鐘間隔並計算相對時間
+						const data = d[0].data
+							.filter(x => dayjs(x.aggregatedAt).minute() % 30 === 0)
+							.map(x => [dayjs.duration(dayjs(x.aggregatedAt).diff(evtbt)).valueOf(), x.score])
 						return { name: evt[0].text, data: data }
 					})
 					.catch(() => {
