@@ -116,6 +116,7 @@
 		<span>&emsp;&emsp;PT差異計算</span>
 		<button id="columnDiff" class="btn btn-outline-primary data">不同名次</button>
 		<button id="rowDiff" class="btn btn-outline-primary data">同名次</button>
+		<button id="resetDiff" class="btn btn-outline-secondary data">重置</button>
 		<div id="table" class="mt-2"></div>
 	</div>
 	
@@ -147,6 +148,11 @@
 	$(()=>{
 
 		dayjs.extend(window.dayjs_plugin_isBetween)
+
+		// 保存原始表格資料，供差異計算使用
+		let originalTableData = null
+		let originalColumns = null
+		let diffState = { columnDiff: false, rowDiff: false, order: [] }
 
 		const idol=[
 			{id:1,text:'1.天海 春香／天海 春香／HARUKA AMAMI'},
@@ -220,7 +226,7 @@
 
 		$(".data").attr('disabled', true)
 
-		var eventList = JSON.parse(localStorage.getItem("eventList"))
+		let eventList = JSON.parse(localStorage.getItem("eventList"))
 		//若首次進入，先取得活動清單
 		if(eventList === null){
 			eventListRenew()
@@ -234,6 +240,12 @@
 		$("#idolId").select2({data:idol}).val(localStorage.getItem("idolId")).trigger('change')
 		$("#rank").val(localStorage.getItem("rank"))
 		$("#tz").text(dayjs().format('Z'))
+
+		// 讀取資料間隔設定
+		const savedAll = localStorage.getItem("all")
+		if (savedAll !== null) {
+			$('input[name=all][value="' + savedAll + '"]').prop('checked', true)
+		}
 
 		$('.form-control').on('keypress', (e)=>{
 			if (e.key === "Enter") {
@@ -253,17 +265,17 @@
 		})
 
 		const chart = Highcharts.chart('mc', {
-            chart: {
-                zoomType: 'x',
+			chart: {
+				zoomType: 'x',
 				resetZoomButton: {
 					position: {
 						align: 'left',
 					}
 				}
-            },
-            title: {
-                text: ''
-            },
+			},
+			title: {
+				text: ''
+			},
 			legend: {
 				itemStyle: {
 					fontSize: '20px'
@@ -276,9 +288,50 @@
 					}
 				}
 			},
-        });
+			xAxis: {
+				type: 'datetime',
+				crosshair: true,
+				labels: {
+					rotation: 0
+				},
+				dateTimeLabelFormats: {
+					day: '%m/%d %H:%M',
+					hour: '%H:%M',
+					minute: '%H:%M'
+				}
+			},
+			tooltip: {
+				shared: true,
+				useHTML: true,
+				padding: 12,
+				style: {
+					fontSize: '14px'
+				},
+				formatter: function() {
+					// this.x 現在是時間戳，需要格式化
+					const timeStr = dayjs(this.x).format('MM/DD HH:mm')
+					let s = '<div style="font-size:16px; font-weight:bold; margin-bottom:8px">' + timeStr + '</div>'
+					this.points.forEach(point => {
+						s += '<div style="margin:4px 0"><span style="color:' + point.color + '">●</span> '
+							+ point.series.name + ' <b>'
+							+ Highcharts.numberFormat(point.y, 0, ',', ',') + '</b></div>'
+					})
+					return s
+				}
+			},
+			plotOptions: {
+				series: {
+					marker: {
+						enabled: false,
+						states: {
+							hover: { enabled: true }
+						}
+					}
+				}
+			},
+		});
 		
-		var table = new Tabulator("#table", {
+		const table = new Tabulator("#table", {
 			height:'500px',
 			autoColumns:true,
 		});
@@ -293,6 +346,10 @@
 
 		$('#rowDiff').on('click', ()=>{
 			rowDiff()
+		})
+
+		$('#resetDiff').on('click', ()=>{
+			resetDiff()
 		})
 
 		$('#update').on('click', ()=>{
@@ -333,6 +390,7 @@
 				localStorage.setItem("idolId", idolId)
 				localStorage.setItem("rank", rank)
 				localStorage.setItem("time", $('#time').val())
+				localStorage.setItem("all", all)
 
 				$.getJSON( url, (d) => {
 					
@@ -376,16 +434,19 @@
 
 
 		function dataProcess(dp){
-            
-			var s=[] //分數
-			
-            let t=dp[0].data.map(e=>dayjs(e.aggregatedAt).format('MM/DD HH:mm')) //取時間
-            r=dp.map(e=>'rank'+e.rank)  //取排名
-            dp.map((e,i)=>{ //取分數
-                s[i] = e.data.map(e=>e.score)
-            })  
 
-            return {time: t, rank:r, score:s}
+			let s = [] //分數
+
+            // 取時間戳（毫秒）供圖表使用
+            let timestamps = dp[0].data.map(e => dayjs(e.aggregatedAt).valueOf())
+            // 取格式化時間供表格使用
+            let t = dp[0].data.map(e => dayjs(e.aggregatedAt).format('MM/DD HH:mm'))
+            r = dp.map(e => 'rank' + e.rank)  //取排名
+            dp.map((e, i) => { //取分數
+                s[i] = e.data.map(e => e.score)
+            })
+
+            return {time: t, timestamps: timestamps, rank: r, score: s}
 
         }//end dataProcess
 
@@ -397,16 +458,14 @@
 				chart.series[0].remove();
 			}
 
-			//加新資料
-			chart.xAxis[0].update({
-				categories: a.time
-			})
-
-			for (let i=0; i<a.rank.length; i++){
+			//加新資料 - 使用 [timestamp, score] 格式
+			for (let i = 0; i < a.rank.length; i++){
+				// 組合時間戳和分數
+				const seriesData = a.timestamps.map((ts, idx) => [ts, a.score[i][idx]])
 				chart.addSeries({
 					lineWidth: 3,
-					name:a.rank[i],
-					data:a.score[i]
+					name: a.rank[i],
+					data: seriesData
 				}, false)
 			}
 			chart.redraw()
@@ -414,136 +473,122 @@
 
 
         function setTable(a){
-            
-			//組合
-			var tData=[]
-			var temp={}
-			
-			for (let j=0 ; j<a.time.length; j++ ) {
-				
-				for (let i=0 ; i<a.rank.length; i++ ) {
+			// 組合
+			let tData = []
+			let temp = {}
+
+			for (let j = 0; j < a.time.length; j++) {
+				for (let i = 0; i < a.rank.length; i++) {
 					temp = Object.assign({}, temp, {[a.rank[i]]: a.score[i][j]})
 				}
-				
-				tData.push(Object.assign({}, {aggregatedAt:a.time[j]} , temp))
+				tData.push(Object.assign({}, {aggregatedAt: a.time[j]}, temp))
 			}
 
+			// 保存原始資料
+			originalTableData = JSON.parse(JSON.stringify(tData))
+			originalColumns = ['aggregatedAt', ...a.rank]
+			diffState = { columnDiff: false, rowDiff: false, order: [] }
+
 			table.setData(tData)
-            
         }
 		
 		
-		async function columnDiff(){
-			//計算排名間差異
-			
-			var ds = table.getData()	//取回資料
-			var td = table.getColumnDefinitions()	//取得column資訊
-			var c = td.length //先固定size
-			
-			let r = await columnCal(c, td, ds)
-			
-			table.setData(r)
-			
-		}//end columnDiff
-		
+		function columnDiff() {
+			// 不同名次差異
+			if (!originalTableData) return
 
-		function columnCal(c, td, ds){
-			//計算排名間pt差
-			
-			let d = Object.values(ds)
-			var dc = []
-			
-			d.forEach((e)=> {
-				//計算單row的diff資料
-				for (var i = 1; i< c-1; i++){
-					let n = td[i].field + '-' + td[i+1].field
-					e = Object.assign({}, e, { [n] : e[td[i].field] - e[td[i+1].field] })
-				}
-				dc.push(e)
+			if (!diffState.columnDiff) {
+				diffState.columnDiff = true
+				diffState.order.push('column')
+			}
+			rebuildTable()
+		}
+
+		function rowDiff() {
+			// 同名次差異
+			if (!originalTableData) return
+
+			if (!diffState.rowDiff) {
+				diffState.rowDiff = true
+				diffState.order.push('row')
+			}
+			rebuildTable()
+		}
+
+		function resetDiff() {
+			// 重置到原始資料
+			if (!originalTableData) return
+
+			diffState = { columnDiff: false, rowDiff: false, order: [] }
+			table.setData(JSON.parse(JSON.stringify(originalTableData)))
+		}
+
+		function rebuildTable() {
+			// 根據狀態重建表格
+			const ds = JSON.parse(JSON.stringify(originalTableData))
+			const cols = originalColumns
+
+			const result = ds.map((row, idx) => {
+				let newRow = {}
+
+				// 原始資料
+				cols.forEach(col => {
+					newRow[col] = row[col]
+				})
+
+				// 依點擊順序加入差異欄位
+				diffState.order.forEach(type => {
+					if (type === 'column') {
+						// 不同名次差異（相鄰排名）
+						for (let i = 1; i < cols.length - 1; i++) {
+							const diffKey = cols[i] + '-' + cols[i + 1]
+							newRow[diffKey] = row[cols[i]] - row[cols[i + 1]]
+						}
+					} else if (type === 'row') {
+						// 同名次差異（與前一時間點）
+						for (let i = 1; i < cols.length; i++) {
+							const diffKey = 'Δ' + cols[i]
+							newRow[diffKey] = idx === 0 ? 0 : row[cols[i]] - originalTableData[idx - 1][cols[i]]
+						}
+					}
+				})
+
+				return newRow
 			})
-			
-			return dc
-			
-		}//end columnCal
-		
 
-		async function rowDiff(){
+			table.setData(result)
+		}
 
-			var ds = table.getData()	//取回資料
-			//計算同排名時間pt差
-            var a=[]    //存放array化的data [time, r1, r2, ...]
-            var t=[]    //存key
-
-            t=(Object.keys(ds[0]))    //抓title
-
-            ds.forEach((v)=>{ //抓data
-                a.push(Object.values(Object.values(v)))
-            })
-
-            //改title
-            var tc=t.length  //先存個數
-            for (let i=1; i<tc; i++){    //0是時間不抓
-                t.push('Δ'+t[i])
-            }
-
-            var b=[]//存放差的資料資料
-            //計算差異
-            var dc=a.length  //先存個數
-            
-            for (var i=0; i<dc;i++){
-                b[i] = await rowDiffCal(a,i,tc,t)
-            }
-
-            table.setData(b)
-		
-		}//end rowDiff
-
-
-        function rowDiffCal(a, i, tc, t){
-            //計算同排名前後時間的pt差
-            var v = []
-            for (let j=1;j<tc;j++){
-                    if (i==0){
-                        v[j-1] = 0
-                    }
-                    else{
-                        v[j-1] = a[i][j] - a[i-1][j]
-                    }
-                }
-            
-            //合併資料&轉物件
-            return Object.fromEntries(t.map((key, index) => [key, a[i].concat(v)[index]]))
-
-        }
-
-		function eventListRenew(){
-			//更新活動清單，並存到localstroage中
+		async function eventListRenew() {
+			// 更新活動清單，並存到 localStorage 中
 			$('#msg').text('更新中')
 			$('#myModal').modal('show')
 
-			$.ajax({
-                url: 'https://api.matsurihi.me/api/mltd/v2/events?type=anniversary&orderBy=id!',
-                async: false,
-                dataType: 'json',
-                success: function (ev) {
-                    let r=[]
-                    for(let i=0; i<ev.length; i++){
-                        r.push({id:ev[i].id, text:ev[i].name, bt:ev[i].schedule.beginAt, et:ev[i].schedule.endAt})
-                    }
-                    localStorage.setItem("eventList", JSON.stringify(r));
-					eventList = r
-					$("#eventId").html('').select2({data:eventList}).trigger('change')
-					getTimeLimit()
-                }
-            });
+			try {
+				const ev = await $.ajax({
+					url: 'https://api.matsurihi.me/api/mltd/v2/events?type=anniversary&orderBy=id!',
+					dataType: 'json'
+				})
 
-			$('#myModal').modal('hide')
+				let r = []
+				for (let i = 0; i < ev.length; i++) {
+					r.push({id: ev[i].id, text: ev[i].name, bt: ev[i].schedule.beginAt, et: ev[i].schedule.endAt})
+				}
+				localStorage.setItem("eventList", JSON.stringify(r))
+				eventList = r
+				$("#eventId").html('').select2({data: eventList}).trigger('change')
+				getTimeLimit()
+			} catch (e) {
+				$('#err').html('<p>更新活動清單失敗，請稍後再試</p>').show()
+			} finally {
+				$('#myModal').modal('hide')
+			}
 		}
 
 		function getTimeLimit(){
 			//取得活動時間
 			
-			var eventid = $('#eventId').select2().val()
+			const eventid = $('#eventId').select2().val()
 			//防bug若選單未有未選跳過
 			if(eventid === null || eventList === null) return
 			
@@ -598,18 +643,24 @@
 		}
 		
 		//更新log
-		const news=`
-		# 2023/8/24
-		1. 偶像增加中文及英文
-		2. 圖放大後的reset按鈕從右上改為左上
-		3. 活動清單以選單選項呈現
-		4. 活動清單若不存在時自動讀取至使用者電腦
-		5. 資料起始時間與活動起始及結束時間連動
-		6. 時間改以plugin選擇
-		7. 送出查詢前檢查內容是否有問題
+		const news = `
+# 2025/1/15
+1. 修復 PT 差異計算按多次會產生無意義欄位的問題
+2. 新增重置按鈕
+3. 儲存資料間隔設定
+4. 圖表優化
+
+# 2023/8/24
+1. 偶像增加中文及英文
+2. 圖放大後的reset按鈕從右上改為左上
+3. 活動清單以選單選項呈現
+4. 活動清單若不存在時自動讀取至使用者電腦
+5. 資料起始時間與活動起始及結束時間連動
+6. 時間改以plugin選擇
+7. 送出查詢前檢查內容是否有問題
 		`
-    	$('#news-detail').html(marked.parse(news))
-		$('#timeUpdate').text('2023-08-25 16:18:00')
+		$('#news-detail').html(marked.parse(news))
+		$('#timeUpdate').text('2025-01-15')
 
 	})//end ready
 	</script>
