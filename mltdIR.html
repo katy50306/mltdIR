@@ -19,7 +19,7 @@
 <body>
 	<div class="container mt-5">
 		<p>資料來源(Data Source)：<a href='https://api.matsurihi.me/docs/'>Princess (Public REST API)</a> - from <a href='https://www.matsurihi.me/'>matsurihi.me</a></p>
-		<p>程式碼更新時間：<span id="timeUpdate"></span>&emsp;<a data-bs-toggle="collapse" href="#news">更新紀錄</a>&emsp;<a href="mltdIR.html" download>下載原始碼</a>&emsp;<a href="https://github.com/katy50306/mltdIR/">github</a></p>
+		<p>程式碼更新時間：<span id="timeUpdate"></span>&emsp;<a data-bs-toggle="collapse" href="#news">更新紀錄</a>&emsp;<a href="mltdIR.html" download>下載原始碼</a>&emsp;<a href="https://github.com/katy50306/mltdIR/">github</a>&emsp;<a href="mltdIRY.html" target="_self">不同周年活動比較</a></p>
 		
 		<!--更新紀錄-->
 		<div class="collapse" id="news">
@@ -649,15 +649,6 @@
 2. 新增重置按鈕
 3. 儲存資料間隔設定
 4. 圖表優化
-
-# 2023/8/24
-1. 偶像增加中文及英文
-2. 圖放大後的reset按鈕從右上改為左上
-3. 活動清單以選單選項呈現
-4. 活動清單若不存在時自動讀取至使用者電腦
-5. 資料起始時間與活動起始及結束時間連動
-6. 時間改以plugin選擇
-7. 送出查詢前檢查內容是否有問題
 		`
 		$('#news-detail').html(marked.parse(news))
 		$('#timeUpdate').text('2025-01-15')

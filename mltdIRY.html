@@ -3,11 +3,10 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<title>偶像別排名log</title>
+	<title>不同周年活動比較</title>
 	<link rel="stylesheet" href="https://unpkg.com/bootstrap@5.3.0/dist/css/bootstrap.min.css">
 	<link rel="stylesheet" href="https://unpkg.com/select2@4.0.13/dist/css/select2.min.css">
 	<link rel="stylesheet" href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_bootstrap5.min.css">
-	<link rel="stylesheet" href="https://unpkg.com/@eonasdan/tempus-dominus@6.7.13/dist/css/tempus-dominus.min.css">
 	<style>
 		.select2 {
 			width: 100%;
@@ -15,18 +14,18 @@
 	</style>
 	<base target="_blank">
 </head>
- 
+
 <body>
 	<div class="container mt-5">
 		<p>資料來源(Data Source)：<a href='https://api.matsurihi.me/docs/'>Princess (Public REST API)</a> - from <a href='https://www.matsurihi.me/'>matsurihi.me</a></p>
-		<p>程式碼更新時間：<span id="timeUpdate"></span>&emsp;<a data-bs-toggle="collapse" href="#news">更新紀錄</a>&emsp;<a href="mltdIR.html" download>下載原始碼</a>&emsp;<a href="https://github.com/katy50306/mltdIR/">github</a></p>
-		
+		<p>程式碼更新時間：<span id="timeUpdate"></span>&emsp;<a data-bs-toggle="collapse" href="#news">更新紀錄</a>&emsp;<a href="mltdIRY.html" download>下載原始碼</a>&emsp;<a href="https://github.com/katy50306/mltdIR/">github</a>&emsp;<a href="mltdIR.html" target="_self">同活動不同名次比較</a></p>
+
 		<!--更新紀錄-->
 		<div class="collapse" id="news">
 			<div class="card card-body" id="news-detail"></div>
 		</div>
 	</div>
-	
+
 	<div class="container my-1">
 		<form>
 			<div class="form-group row">
@@ -49,7 +48,7 @@
 			<div class="form-group row my-2">
 			  <label for="rank" class="col-sm-2 col-form-label">名次</label>
 			  <div class="col-sm-3">
-				<input type="input" class="form-control" id="rank" placeholder="請輸入1-1000的其中一個數字">
+				<input type="text" class="form-control" id="rank" placeholder="請輸入1-1000的其中一個數字">
 			  </div>
 			</div>
 		</form>
@@ -72,7 +71,19 @@
 		<p>Chart</p>
 		<div id="mc" style="width:100%; height:400px;"></div>
 	</div>
-	
+
+	<hr>
+
+	<div class="container mb-5">
+		<p>Data</p>
+		<button id="download-csv" class="btn btn-outline-primary data">下載CSV</button>
+		<span>&emsp;&emsp;PT差異計算</span>
+		<button id="columnDiff" class="btn btn-outline-primary data">不同活動</button>
+		<button id="rowDiff" class="btn btn-outline-primary data">同活動</button>
+		<button id="resetDiff" class="btn btn-outline-secondary data">重置</button>
+		<div id="table" class="mt-2"></div>
+	</div>
+
 	<!--更新時告知使用者用-->
 	<div id="myModal" class="modal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1">
 		<div class="modal-dialog">
@@ -82,14 +93,11 @@
 			</div>
 		  </div>
 		</div>
-	</div>	  
+	</div>
 
 	<script src='https://unpkg.com/jquery@3.7.0/dist/jquery.min.js'></script>
 	<script src='https://unpkg.com/@popperjs/core@2.11.8/dist/umd/popper.min.js'></script>
 	<script src='https://unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.min.js'></script>
-	<script src="https://unpkg.com/@fortawesome/fontawesome-free@6.4.2/js/solid.min.js"></script>
-    <script src="https://unpkg.com/@fortawesome/fontawesome-free@6.4.2/js/fontawesome.min.js"></script>
-	<script src="https://unpkg.com/@eonasdan/tempus-dominus@6.7.13/dist/js/tempus-dominus.js"></script>
 	<script src="https://code.highcharts.com/11.1.0/highcharts.js"></script>
 	<script src="https://unpkg.com/dayjs@1.11.9/dayjs.min.js"></script>
 	<script src="https://unpkg.com/dayjs@1.11.9/plugin/duration.js"></script>
@@ -98,10 +106,14 @@
 	<script src="https://unpkg.com/marked@5.1.1/marked.min.js"></script>
 
 	<script>
-	
 	$(()=>{
 
 		dayjs.extend(window.dayjs_plugin_duration)
+
+		// 保存原始表格資料，供差異計算使用
+		let originalTableData = null
+		let originalColumns = null
+		let diffState = { columnDiff: false, rowDiff: false, order: [] }
 
 		const idol=[
 			{id:1,text:'1.天海 春香／天海 春香／HARUKA AMAMI'},
@@ -160,16 +172,20 @@
 
 		$('#err').hide()
 
-		var eventList = JSON.parse(localStorage.getItem("eventList"))
+		$(".data").attr('disabled', true)
+
+		let eventList = JSON.parse(localStorage.getItem("eventList"))
 		//若首次進入，先取得活動清單
 		if(eventList === null){
 			eventListRenew()
 		}
 		else{
-			$("#eventId").select2({data:eventList, multiple:true}).val(localStorage.getItem("eventId")).trigger('change')
+			$("#eventId").select2({data:eventList, multiple:true}).val(JSON.parse(localStorage.getItem("eventIdY"))).trigger('change')
 		}
 
-        $("#idolId").select2({data:idol})
+		//帶預設值
+		$("#idolId").select2({data:idol}).val(localStorage.getItem("idolIdY")).trigger('change')
+		$("#rank").val(localStorage.getItem("rankY"))
 
 		$('.form-control').on('keypress', (e)=>{
 			if (e.key === "Enter") {
@@ -184,17 +200,17 @@
 		})
 
 		const chart = Highcharts.chart('mc', {
-            chart: {
-                zoomType: 'x',
+			chart: {
+				zoomType: 'x',
 				resetZoomButton: {
 					position: {
 						align: 'left',
 					}
 				}
-            },
-            title: {
-                text: ''
-            },
+			},
+			title: {
+				text: ''
+			},
 			legend: {
 				itemStyle: {
 					fontSize: '20px'
@@ -209,129 +225,314 @@
 			},
 			xAxis: {
 				type: 'datetime',
+				crosshair: true,
+				labels: {
+					rotation: 0
+				},
 				dateTimeLabelFormats: {
 					day: 'Day %e',
-      				hour: '%H:%M'
-				},
-				crosshair: true,
-			},
-			tooltip: {
-				xDateFormat: 'Day %e %H:%M',
-				shared: true,
-				style: {
-					fontSize: '16px'
+					hour: '%H:%M',
+					minute: '%H:%M'
 				}
 			},
-        });
-		
+			tooltip: {
+				shared: true,
+				useHTML: true,
+				padding: 12,
+				style: {
+					fontSize: '14px'
+				},
+				formatter: function() {
+					// this.x 是從活動開始的毫秒數，轉換為 Day X HH:mm 格式
+					const duration = dayjs.duration(this.x)
+					const days = Math.floor(duration.asDays()) + 1
+					const hours = duration.hours().toString().padStart(2, '0')
+					const minutes = duration.minutes().toString().padStart(2, '0')
+					const timeStr = 'Day ' + days + ' ' + hours + ':' + minutes
+
+					let s = '<div style="font-size:16px; font-weight:bold; margin-bottom:8px">' + timeStr + '</div>'
+					this.points.forEach(point => {
+						s += '<div style="margin:4px 0"><span style="color:' + point.color + '">●</span> '
+							+ point.series.name + ' <b>'
+							+ Highcharts.numberFormat(point.y, 0, ',', ',') + '</b></div>'
+					})
+					return s
+				}
+			},
+			plotOptions: {
+				series: {
+					marker: {
+						enabled: false,
+						states: {
+							hover: { enabled: true }
+						}
+					}
+				}
+			},
+		});
+
+		const table = new Tabulator("#table", {
+			height:'500px',
+			autoColumns:true,
+		});
+
+		$("#download-csv").on("click", ()=>{
+			table.download("csv", "data.csv", {bom:true})
+		});
+
+		$('#columnDiff').on('click', ()=>{
+			columnDiff()
+		})
+
+		$('#rowDiff').on('click', ()=>{
+			rowDiff()
+		})
+
+		$('#resetDiff').on('click', ()=>{
+			resetDiff()
+		})
+
 		$('#update').on('click', async ()=>{
 			try{
-				
+
 				//取值
 				const eventId = $('#eventId').val()
 				const idolId = $('#idolId').val()
-				const rank = $('#rank').val()*1
-				
+				const rank = $('#rank').val() * 1
+
 				//檢查是否都填了
 				let msg='';
 
 				if(eventId.length === 0) msg+='<p>活動未選</p>'
-				if(idolId === null) msg+='<p>偶像未選</p>'				
-				if( !Number.isInteger(rank) || rank < 1 || rank > 1000 ) msg+='<p>名次未填、超出範圍或非數字</p>'
+				if(idolId === null) msg+='<p>偶像未選</p>'
+				if(!Number.isInteger(rank) || rank < 1 || rank > 1000) msg+='<p>名次未填、超出範圍或非數字</p>'
+
 				if(msg.length>0) throw msg
-                
+
 				//告知使用者更新中
 				$('#msg').text('更新中')
 				$('#myModal').modal('show')
 
-                //抓資料
-                let data = await gmd(eventId, idolId, rank)
-                
-                //畫圖
-                await draw(data)
+				//儲存變數，下次進入時代入
+				localStorage.setItem("eventIdY", JSON.stringify(eventId))
+				localStorage.setItem("idolIdY", idolId)
+				localStorage.setItem("rankY", rank)
 
-                //完成後關閉modal及錯誤訊息
-                $('#myModal').modal('hide')
+				//抓資料
+				const data = await fetchData(eventId, idolId, rank)
+
+				//畫圖
+				draw(data)
+
+				//設定表格
+				setTable(data)
+
+				$(".data").attr('disabled', false)
 				$('#err').hide()
-                
-				
+
 			} catch(e){
 				$('#err').html(e).show()
-			}			
+			} finally {
+				$('#myModal').modal('hide')
+			}
 		})
 
-        async function gmd(eID, iID, rID){
-            //取得資料
-            
-            var r=[]
+		async function fetchData(eventIds, idolId, rank) {
+			// 平行發出所有請求
+			const promises = eventIds.map(eventId => {
+				const url = "https://api.matsurihi.me/api/mltd/v2/events/" + eventId + "/rankings/idolPoint/" + idolId + "/logs/" + rank + '?prettyPrint=false'
 
-            for(var i=0; i<eID.length; i++){
-                let url = "https://api.matsurihi.me/api/mltd/v2/events/" + eID[i] + "/rankings/idolPoint/" + iID + "/logs/" + rID + '?prettyPrint=false'
-                $.ajax({
-					dataType: "json",
-					url: url,
-					async: false
-				})
-                .done((d)=>{
+				return $.ajax({ dataType: "json", url: url })
+					.then(d => {
+						// 找出活動的名稱跟開始時間
+						const evt = $.grep(eventList, (item) => item.id == eventId)
+						const evtbt = dayjs(evt[0].bt)
 
-					//找出活動的名稱跟開始時間
-					let evt = $.grep(eventList,(item)=>{
-						return item.id == eID[i]
+						// 處理資料：計算相對於活動開始時間的 duration（毫秒）
+						const data = d[0].data.map(x => {
+							return [dayjs.duration(dayjs(x.aggregatedAt).diff(evtbt)).valueOf(), x.score]
+						})
+						return { name: evt[0].text, data: data }
 					})
-					var evtbt=dayjs(evt[0].bt)
+					.catch(() => {
+						$('#err').html('抓資料發生錯誤，請稍後再試。若重複出現請連同查詢條件開github issue').show()
+						return null
+					})
+			})
 
-                    //處理資料
-                    let a = d[0].data.map(x=>{
-                        return [dayjs.duration(dayjs(x.aggregatedAt).diff(evtbt)).valueOf(), x.score]
-                    })
-                    r.push({id:evt[0].text, data:a})
-                })
-                .fail(()=>{
-                    $('#err').html('抓資料發生錯誤，請稍後再試。若重複出現請連同查詢條件開github issue').show()
-                })
-            }
+			const results = await Promise.all(promises)
+			return results.filter(r => r !== null)
+		}
 
-            return r
-        }
 
-		function draw(a){
+		function draw(data){
+
 			//清舊資料
 			while (chart.series.length > 0) {
 				chart.series[0].remove();
 			}
 
-			for (let i=0; i<a.length; i++){
+			//加新資料
+			for (let i = 0; i < data.length; i++){
 				chart.addSeries({
 					lineWidth: 3,
-					name:a[i].id,
-					data:a[i].data
+					name: data[i].name,
+					data: data[i].data
 				}, false)
 			}
 			chart.redraw()
 		}
 
-		function eventListRenew(){
-			//更新活動清單，並存到localstroage中
+
+		function setTable(data){
+			// 找出所有時間點的聯集（以相對時間為 key）
+			const timeSet = new Set()
+			data.forEach(series => {
+				series.data.forEach(point => {
+					timeSet.add(point[0])
+				})
+			})
+			const times = Array.from(timeSet).sort((a, b) => a - b)
+
+			// 建立每個系列的時間→分數對照表
+			const scoreMap = data.map(series => {
+				const map = {}
+				series.data.forEach(point => {
+					map[point[0]] = point[1]
+				})
+				return map
+			})
+
+			// 組合表格資料
+			const tData = times.map(time => {
+				const duration = dayjs.duration(time)
+				const days = Math.floor(duration.asDays()) + 1
+				const hours = duration.hours().toString().padStart(2, '0')
+				const minutes = duration.minutes().toString().padStart(2, '0')
+				const timeStr = 'Day ' + days + ' ' + hours + ':' + minutes
+
+				const row = { time: timeStr }
+				data.forEach((series, idx) => {
+					row[series.name] = scoreMap[idx][time] ?? null
+				})
+				return row
+			})
+
+			// 保存原始資料
+			originalTableData = JSON.parse(JSON.stringify(tData))
+			originalColumns = ['time', ...data.map(s => s.name)]
+			diffState = { columnDiff: false, rowDiff: false, order: [] }
+
+			table.setData(tData)
+		}
+
+
+		function columnDiff() {
+			// 不同活動差異
+			if (!originalTableData) return
+
+			if (!diffState.columnDiff) {
+				diffState.columnDiff = true
+				diffState.order.push('column')
+			}
+			rebuildTable()
+		}
+
+		function rowDiff() {
+			// 同活動差異
+			if (!originalTableData) return
+
+			if (!diffState.rowDiff) {
+				diffState.rowDiff = true
+				diffState.order.push('row')
+			}
+			rebuildTable()
+		}
+
+		function resetDiff() {
+			// 重置到原始資料
+			if (!originalTableData) return
+
+			diffState = { columnDiff: false, rowDiff: false, order: [] }
+			table.setData(JSON.parse(JSON.stringify(originalTableData)))
+		}
+
+		function rebuildTable() {
+			// 根據狀態重建表格
+			const ds = JSON.parse(JSON.stringify(originalTableData))
+			const cols = originalColumns
+
+			const result = ds.map((row, idx) => {
+				let newRow = {}
+
+				// 原始資料
+				cols.forEach(col => {
+					newRow[col] = row[col]
+				})
+
+				// 依點擊順序加入差異欄位
+				diffState.order.forEach(type => {
+					if (type === 'column') {
+						// 不同活動差異（相鄰活動）
+						for (let i = 1; i < cols.length - 1; i++) {
+							const diffKey = cols[i] + '-' + cols[i + 1]
+							const val1 = row[cols[i]]
+							const val2 = row[cols[i + 1]]
+							newRow[diffKey] = (val1 !== null && val2 !== null) ? val1 - val2 : null
+						}
+					} else if (type === 'row') {
+						// 同活動差異（與前一時間點）
+						for (let i = 1; i < cols.length; i++) {
+							const diffKey = 'Δ' + cols[i]
+							const curr = row[cols[i]]
+							const prev = idx === 0 ? null : originalTableData[idx - 1][cols[i]]
+							newRow[diffKey] = (curr !== null && prev !== null) ? curr - prev : (idx === 0 ? 0 : null)
+						}
+					}
+				})
+
+				return newRow
+			})
+
+			table.setData(result)
+		}
+
+		async function eventListRenew() {
+			// 更新活動清單，並存到 localStorage 中
 			$('#msg').text('更新中')
 			$('#myModal').modal('show')
 
-			$.ajax({
-                url: 'https://api.matsurihi.me/api/mltd/v2/events?type=anniversary&orderBy=id!',
-                async: false,
-                dataType: 'json',
-                success: function (ev) {
-                    let r=[]
-                    for(let i=0; i<ev.length; i++){
-                        r.push({id:ev[i].id, text:ev[i].name, bt:ev[i].schedule.beginAt, et:ev[i].schedule.endAt})
-                    }
-                    localStorage.setItem("eventList", JSON.stringify(r));
-					eventList = r
-					$("#eventId").html('').select2({data:eventList}).trigger('change')
-                }
-            });
+			try {
+				const ev = await $.ajax({
+					url: 'https://api.matsurihi.me/api/mltd/v2/events?type=anniversary&orderBy=id!',
+					dataType: 'json'
+				})
 
-			$('#myModal').modal('hide')
+				let r = []
+				for (let i = 0; i < ev.length; i++) {
+					r.push({id: ev[i].id, text: ev[i].name, bt: ev[i].schedule.beginAt, et: ev[i].schedule.endAt})
+				}
+				localStorage.setItem("eventList", JSON.stringify(r))
+				eventList = r
+				$("#eventId").html('').select2({data: eventList, multiple: true}).trigger('change')
+			} catch (e) {
+				$('#err').html('<p>更新活動清單失敗，請稍後再試</p>').show()
+			} finally {
+				$('#myModal').modal('hide')
+			}
 		}
+
+		//更新log
+		const news = `
+# 2025/1/15
+1. 新增表格及 CSV 下載功能
+2. 新增 PT 差異計算（不同活動/同活動）
+3. 圖表滑鼠移過時顯示各活動 PT 值
+4. 資料載入速度提升
+5. 與「同活動不同名次比較」頁面互連
+		`
+		$('#news-detail').html(marked.parse(news))
+		$('#timeUpdate').text('2025-01-15')
 
 	})//end ready
 	</script>
