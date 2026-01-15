@@ -4,10 +4,10 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<title>偶像別排名log</title>
-	<link rel="stylesheet" href="https://unpkg.com/bootstrap@5.3.0/dist/css/bootstrap.min.css">
-	<link rel="stylesheet" href="https://unpkg.com/select2@4.0.13/dist/css/select2.min.css">
-	<link rel="stylesheet" href="https://unpkg.com/tabulator-tables@5.5.0/dist/css/tabulator_bootstrap5.min.css">
-	<link rel="stylesheet" href="https://unpkg.com/@eonasdan/tempus-dominus@6.7.13/dist/css/tempus-dominus.min.css">
+	<link rel="stylesheet" href="https://unpkg.com/bootstrap@5.3.8/dist/css/bootstrap.min.css">
+	<link rel="stylesheet" href="https://unpkg.com/select2@4.1.0-rc.0/dist/css/select2.min.css">
+	<link rel="stylesheet" href="https://unpkg.com/tabulator-tables@6.3.1/dist/css/tabulator_bootstrap5.min.css">
+	<link rel="stylesheet" href="https://unpkg.com/@eonasdan/tempus-dominus@6.7.13/dist/css/tempus-dominus.css">
 	<style>
 		.select2 {
 			width: 100%;
@@ -68,7 +68,7 @@
 				<div class="col-sm-3">
 				  <div class="input-group" id="tp" data-td-target-input="nearest" data-td-target-toggle="nearest">
 					<input id="time" type="text" class="form-control" data-td-target="#tp">
-					<span class="input-group-text" data-td-target="#tp" data-td-toggle="datetimepicker"><span class="fas fa-calendar"></span></span>
+					<span class="input-group-text" data-td-target="#tp" data-td-toggle="datetimepicker"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M3.5 0a.5.5 0 0 1 .5.5V1h8V.5a.5.5 0 0 1 1 0V1h1a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V3a2 2 0 0 1 2-2h1V.5a.5.5 0 0 1 .5-.5M1 4v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V4z"/></svg></span>
 				  </div>
 				</div>
 				<div class="col-sm-3">
@@ -131,18 +131,16 @@
 		</div>
 	</div>	  
 
-	<script src='https://unpkg.com/jquery@3.7.0/dist/jquery.min.js'></script>
+	<script src='https://unpkg.com/jquery@3.7.1/dist/jquery.min.js'></script>
 	<script src='https://unpkg.com/@popperjs/core@2.11.8/dist/umd/popper.min.js'></script>
-	<script src='https://unpkg.com/bootstrap@5.3.0/dist/js/bootstrap.min.js'></script>
-	<script src="https://unpkg.com/@fortawesome/fontawesome-free@6.4.2/js/solid.min.js"></script>
-    <script src="https://unpkg.com/@fortawesome/fontawesome-free@6.4.2/js/fontawesome.min.js"></script>
+	<script src='https://unpkg.com/bootstrap@5.3.8/dist/js/bootstrap.min.js'></script>
 	<script src="https://unpkg.com/@eonasdan/tempus-dominus@6.7.13/dist/js/tempus-dominus.js"></script>
-	<script src="https://code.highcharts.com/11.1.0/highcharts.js"></script>
-	<script src="https://unpkg.com/dayjs@1.11.9/dayjs.min.js"></script>
-	<script src="https://unpkg.com/dayjs@1.11.9/plugin/isBetween.js"></script>
-	<script src="https://unpkg.com/select2@4.0.13/dist/js/select2.full.min.js"></script>
-	<script src="https://unpkg.com/tabulator-tables@5.5.0/dist/js/tabulator.min.js"></script>
-	<script src="https://unpkg.com/marked@5.1.1/marked.min.js"></script>
+	<script src="https://code.highcharts.com/12.1.2/highcharts.js"></script>
+	<script src="https://unpkg.com/dayjs@1.11.19/dayjs.min.js"></script>
+	<script src="https://unpkg.com/dayjs@1.11.19/plugin/isBetween.js"></script>
+	<script src="https://unpkg.com/select2@4.1.0-rc.0/dist/js/select2.full.min.js"></script>
+	<script src="https://unpkg.com/tabulator-tables@6.3.1/dist/js/tabulator.min.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/16.3.0/lib/marked.umd.min.js"></script>
 
 	<script>
 	$(()=>{

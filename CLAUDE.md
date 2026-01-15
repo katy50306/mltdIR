@@ -54,21 +54,26 @@ mltdIR/
 - 選擇單一偶像
 - 輸入單一排名（1-1000）
 - 產生折線圖（X 軸為活動開始後經過的時間）
+- 產生資料表格
+- 下載 CSV
+- 計算 PT 差異（不同活動間、同活動時間差）
 - 適合比較不同年度同一偶像、同一排名的表現趨勢
 
 ## 使用的前端套件
 
 | 套件 | 版本 | 用途 |
 |------|------|------|
-| jQuery | 3.7.0 | DOM 操作、AJAX |
-| Bootstrap | 5.3.0 | UI 框架 |
-| Select2 | 4.0.13 | 下拉選單美化 |
-| Tabulator | 5.5.0 | 表格元件（mltdIR.html） |
-| Highcharts | 11.1.0 | 折線圖繪製 |
-| dayjs | 1.11.9 | 日期時間處理 |
+| jQuery | 3.7.1 | DOM 操作、AJAX |
+| Bootstrap | 5.3.8 | UI 框架 |
+| Popper.js | 2.11.8 | Bootstrap 依賴 |
+| Select2 | 4.1.0-rc.0 | 下拉選單美化 |
+| Tabulator | 6.3.1 | 表格元件 |
+| Highcharts | 12.1.2 | 折線圖繪製 |
+| dayjs | 1.11.19 | 日期時間處理 |
 | Tempus Dominus | 6.7.13 | 日期時間選擇器（mltdIR.html） |
-| Font Awesome | 6.4.2 | 圖示 |
-| marked | 5.1.1 | Markdown 解析 |
+| marked | 16.3.0 | Markdown 解析 |
+
+> 註：日曆圖示改用 inline SVG，不再依賴 Font Awesome
 
 ## 偶像清單
 
