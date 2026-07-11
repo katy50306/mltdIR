@@ -263,6 +263,10 @@
 		})
 
 		const chart = Highcharts.chart('mc', {
+			time: {
+				// Highcharts 預設以 UTC 顯示軸標籤，改用瀏覽器本地時區（與 tooltip 的 dayjs 一致）
+				timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+			},
 			chart: {
 				zoomType: 'x',
 				resetZoomButton: {
